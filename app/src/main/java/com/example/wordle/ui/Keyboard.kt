@@ -26,6 +26,7 @@ fun KeyboardKey(
     text: String,
     state: KeyState = KeyState.DEFAULT,
     modifier: Modifier = Modifier,
+    // Sends key value back to WordleKeyboard
     onClick: (String) -> Unit
 ) {
     // Colors based on the state
@@ -61,6 +62,7 @@ fun KeyboardKey(
 fun WordleKeyboard(
     // Map passing the currentt state of any typed letters
     keyStates: Map<Char, KeyState> = emptyMap(),
+    // Sends key value back to MainActivity
     onKeyPress: (String) -> Unit
 ) {
     val row1 = listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P")
@@ -100,7 +102,7 @@ fun WordleKeyboard(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             row3.forEach { key ->
                 val weight = if (key == "ENTER" || key == "⌫") 1.5f else 1f
-                val state = if (key.length == 1) keyStates[key.first()] ?: KeyState.DEFAULT else KeyState.DEFAULT
+                val state = keyStates[key.first()] ?: KeyState.DEFAULT
 
                 KeyboardKey(
                     text = key,
