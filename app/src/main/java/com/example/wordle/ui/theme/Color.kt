@@ -9,3 +9,16 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
+
+val WordleBackground = Color(0xFFF6F4EE)
+val WordleTitle = Color(0xFF222222)
+val WordleTextPrimary = Color(0xFF111827)
+val WordleTextSecondary = Color(0xFF4B5563)
+
+val TileEmptyBackground = Color(0xFFFFFFFF)
+val TileEmptyBorder = Color(0xFFD6D3D1)
+val TileTypingBorder = Color(0xFF78716C)
+
+val TileCorrect = Color(0xFF6AAA01)
+val TilePresent = Color(0xFFC9B200)
+val TileAbsent = Color(0xFF787C7E)
