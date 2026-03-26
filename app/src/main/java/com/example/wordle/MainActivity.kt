@@ -4,13 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement // Added import
+import androidx.compose.foundation.layout.Column      // Added import
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.wordle.ui.WordleKeyboard          // Added import since it's in the .ui folder now
 import com.example.wordle.ui.theme.WordleTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,28 +20,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             WordleTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    // Use a Column to push the keyboard to the bottom of the screen
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        verticalArrangement = Arrangement.Bottom // Pushes keyboard to bottom
+                    ) {
+                        WordleKeyboard(
+                            onKeyPress = { pressedKey ->
+                                // Here is where you will handle the key press later!
+                                println("Key pressed: $pressedKey")
+                            }
+                        )
+                    }
                 }
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WordleTheme {
-        Greeting("Android")
-    }
-}
+} // <- Added this missing closing brace for the MainActivity class!
