@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                             // Keyboard at the bottom
                             WordleKeyboard(
                                 onKeyPress = { pressedKey ->
-                                    println("Key pressed: $pressedKey")
+                                    gameViewModel.onKeyPress(pressedKey)
                                 }
                             )
                         }
