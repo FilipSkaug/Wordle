@@ -1,4 +1,3 @@
-
 package com.example.wordle.ui
 
 import androidx.compose.foundation.background
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -23,9 +23,9 @@ enum class KeyState {
 // Function for a single key
 @Composable
 fun KeyboardKey(
+    modifier: Modifier = Modifier,
     text: String,
     state: KeyState = KeyState.DEFAULT,
-    modifier: Modifier = Modifier,
     // Sends key value back to WordleKeyboard
     onClick: (String) -> Unit
 ) {
@@ -113,4 +113,21 @@ fun WordleKeyboard(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WordleKeyboardPreview() {
+    val sampleKeyStates = mapOf(
+        'W' to KeyState.CORRECT,
+        'O' to KeyState.PRESENT,
+        'R' to KeyState.ABSENT,
+        'D' to KeyState.CORRECT,
+        'L' to KeyState.PRESENT,
+        'E' to KeyState.ABSENT
+    )
+    WordleKeyboard(
+        keyStates = sampleKeyStates,
+        onKeyPress = {}
+    )
 }
