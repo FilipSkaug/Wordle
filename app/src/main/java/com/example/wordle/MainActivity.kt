@@ -6,16 +6,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wordle.ui.WordleKeyboard
+import com.example.wordle.ui.auth.AuthScreen
+import com.example.wordle.ui.auth.AuthViewModel
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.theme.WordleTheme
@@ -26,35 +34,71 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WordleTheme {
-                val gameViewModel: GameViewModel = viewModel()
-                val uiState by gameViewModel.uiState.collectAsStateWithLifecycle()
+                val authViewModel = viewModel<AuthViewModel>()
+                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Game board area
-                            GameScreen(
-                                uiState = uiState,
-                                modifier = Modifier.weight(1f)
-                            )
+                if (authUiState.isAuthenticated) {
+                    val gameViewModel = viewModel<GameViewModel>()
+                    val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
-                            // Keyboard at the bottom
-                            WordleKeyboard(
-                                onKeyPress = { pressedKey ->
-                                    gameViewModel.onKeyPress(pressedKey)
-                                }
-                            )
-                        }
+                    AuthenticatedApp(
+                        gameUiState = gameUiState,
+                        onKeyPress = gameViewModel::onKeyPress,
+                        onLogout = authViewModel::logout
+                    )
+                } else {
+                    AuthScreen(
+                        uiState = authUiState,
+                        onEmailChanged = authViewModel::onEmailChanged,
+                        onPasswordChanged = authViewModel::onPasswordChanged,
+                        onUsernameChanged = authViewModel::onUsernameChanged,
+                        onSubmit = authViewModel::submit,
+                        onSwitchToLogin = authViewModel::showLogin,
+                        onSwitchToSignup = authViewModel::showSignup
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthenticatedApp(
+    gameUiState: com.example.wordle.ui.game.GameUiState,
+    onKeyPress: (String) -> Unit,
+    onLogout: () -> Unit
+) {
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onLogout) {
+                        Text("Log out")
                     }
                 }
+
+                GameScreen(
+                    uiState = gameUiState,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Keyboard at the bottom
+                WordleKeyboard(
+                    onKeyPress = onKeyPress
+                )
             }
         }
     }
