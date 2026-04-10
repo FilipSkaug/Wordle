@@ -65,14 +65,7 @@ fun GameScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             GuessGrid(rows = uiState.rows)
-
             Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = "Keyboard will be integrated later",
-                style = MaterialTheme.typography.bodyMedium,
-                color = WordleTextSecondary
-            )
         }
     }
 }
