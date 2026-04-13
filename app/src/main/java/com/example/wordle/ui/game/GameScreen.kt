@@ -65,7 +65,9 @@ fun GameScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             GuessGrid(rows = uiState.rows)
+
             Spacer(modifier = Modifier.weight(1f))
+
         }
     }
 }

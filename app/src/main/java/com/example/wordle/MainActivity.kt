@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
                     AuthenticatedApp(
                         gameUiState = gameUiState,
+                        onKeyPress = gameViewModel::onKeyPress,
                         onLogout = authViewModel::logout
                     )
                 } else {
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AuthenticatedApp(
     gameUiState: com.example.wordle.ui.game.GameUiState,
+    onKeyPress: (String) -> Unit,
     onLogout: () -> Unit
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -93,10 +95,9 @@ private fun AuthenticatedApp(
                     modifier = Modifier.weight(1f)
                 )
 
+                // Keyboard at the bottom
                 WordleKeyboard(
-                    onKeyPress = { pressedKey ->
-                        println("Key pressed: $pressedKey")
-                    }
+                    onKeyPress = onKeyPress
                 )
             }
         }
