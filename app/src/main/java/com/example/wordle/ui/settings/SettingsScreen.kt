@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -54,9 +54,9 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold
             )
             
-            var hardMode by remember { mutableStateOf(false) }
-            var darkTheme by remember { mutableStateOf(false) }
-            var highContrast by remember { mutableStateOf(false) }
+            var hardMode by rememberSaveable { mutableStateOf(false) }
+            var darkTheme by rememberSaveable { mutableStateOf(false) }
+            var highContrast by rememberSaveable { mutableStateOf(false) }
 
             SettingsToggle(
                 label = "Hard Mode",
