@@ -19,15 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.wordle.ui.theme.WordleBackground
-import com.example.wordle.ui.theme.WordleTextSecondary
 import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.theme.WordleTitle
 
 @Composable
 fun GameScreen(
@@ -36,7 +34,7 @@ fun GameScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = WordleBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -50,7 +48,7 @@ fun GameScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 4.sp,
-                color = WordleTitle
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -58,7 +56,7 @@ fun GameScreen(
             Text(
                 text = uiState.statusText,
                 style = MaterialTheme.typography.bodyLarge,
-                color = WordleTextSecondary,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
 
@@ -67,7 +65,6 @@ fun GameScreen(
             GuessGrid(rows = uiState.rows)
 
             Spacer(modifier = Modifier.weight(1f))
-
         }
     }
 }
@@ -99,16 +96,35 @@ private fun LetterTile(
     tile: TileUiState,
     modifier: Modifier = Modifier
 ) {
+    // Get colors from theme based on state
+    val backgroundColor = when (tile.state) {
+        TileVisualState.CORRECT -> WordleTheme.colors.correct
+        TileVisualState.PRESENT -> WordleTheme.colors.present
+        TileVisualState.ABSENT -> WordleTheme.colors.absent
+        TileVisualState.EMPTY, TileVisualState.TYPING -> MaterialTheme.colorScheme.surface
+    }
+
+    val borderColor = when (tile.state) {
+        TileVisualState.EMPTY -> MaterialTheme.colorScheme.outlineVariant
+        TileVisualState.TYPING -> MaterialTheme.colorScheme.outline
+        else -> backgroundColor // Matches background for filled states
+    }
+
+    val textColor = when (tile.state) {
+        TileVisualState.EMPTY, TileVisualState.TYPING -> MaterialTheme.colorScheme.onSurface
+        else -> Color.White
+    }
+
     Box(
         modifier = modifier
             .size(56.dp)
-            .background(tile.state.getBackgroundColor(), RoundedCornerShape(12.dp))
-            .border(2.dp, tile.state.getBorderColor(), RoundedCornerShape(12.dp)),
+            .background(backgroundColor, RoundedCornerShape(12.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = tile.letter?.toString() ?: "",
-            color = tile.state.getTextColor(),
+            color = textColor,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
