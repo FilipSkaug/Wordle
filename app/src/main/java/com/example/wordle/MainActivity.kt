@@ -17,9 +17,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,7 @@ class MainActivity : ComponentActivity() {
                 val authViewModel = viewModel<AuthViewModel>()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                 
-                var currentScreen by remember { mutableStateOf(Screen.Menu) }
+                var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -55,7 +56,6 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (currentScreen) {
                         Screen.Menu -> MenuScreen(
-                            isAuthenticated = authUiState.isAuthenticated,
                             onPlayDaily = { currentScreen = Screen.Game },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
@@ -81,22 +81,22 @@ class MainActivity : ComponentActivity() {
 
                         Screen.Auth -> {
                             BackHandler { currentScreen = Screen.Menu }
+                            
+                            LaunchedEffect(authUiState.isAuthenticated) {
+                                if (authUiState.isAuthenticated) {
+                                    currentScreen = Screen.Menu
+                                }
+                            }
+                            
                             AuthScreen(
                                 uiState = authUiState,
                                 onEmailChanged = authViewModel::onEmailChanged,
                                 onPasswordChanged = authViewModel::onPasswordChanged,
                                 onUsernameChanged = authViewModel::onUsernameChanged,
-                                onSubmit = {
-                                    authViewModel.submit()
-                                    if (authUiState.isAuthenticated) currentScreen = Screen.Menu
-                                },
+                                onSubmit = { authViewModel.submit() },
                                 onSwitchToLogin = authViewModel::showLogin,
                                 onSwitchToSignup = authViewModel::showSignup
                             )
-                            
-                            if (authUiState.isAuthenticated && currentScreen == Screen.Auth) {
-                                currentScreen = Screen.Menu
-                            }
                         }
 
                         Screen.Settings -> {

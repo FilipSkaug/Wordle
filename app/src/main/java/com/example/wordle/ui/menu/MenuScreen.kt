@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wordle.BuildConfig
 import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordlePrimaryAction
 import com.example.wordle.ui.theme.WordleSurface
@@ -24,7 +25,6 @@ import com.example.wordle.ui.theme.WordleTitle
 
 @Composable
 fun MenuScreen(
-    isAuthenticated: Boolean,
     onPlayDaily: () -> Unit,
     onLoginClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -78,7 +78,7 @@ fun MenuScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         MenuButton(
-            text = if (isAuthenticated) "View Profile" else "Login / Sign up",
+            text = "Login / Sign up",
             icon = Icons.Default.AccountCircle,
             onClick = onLoginClick
         )
@@ -95,7 +95,7 @@ fun MenuScreen(
         }
         
         Text(
-            text = "v1.0.0",
+            text = "v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
             color = WordleTitle.copy(alpha = 0.4f),
             modifier = Modifier.padding(top = 16.dp)
@@ -145,7 +145,6 @@ fun MenuButton(
 @Composable
 fun MenuScreenPreview() {
     MenuScreen(
-        isAuthenticated = false,
         onPlayDaily = {},
         onLoginClick = {},
         onSettingsClick = {},
