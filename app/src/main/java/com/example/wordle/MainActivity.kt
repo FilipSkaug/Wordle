@@ -31,10 +31,11 @@ import com.example.wordle.ui.auth.AuthViewModel
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.menu.MenuScreen
+import com.example.wordle.ui.settings.SettingsScreen
 import com.example.wordle.ui.theme.WordleTheme
 
 enum class Screen {
-    Menu, Game, Auth
+    Menu, Game, Auth, Settings
 }
 
 class MainActivity : ComponentActivity() {
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
                             isAuthenticated = authUiState.isAuthenticated,
                             onPlayDaily = { currentScreen = Screen.Game },
                             onLoginClick = { currentScreen = Screen.Auth },
-                            onSettingsClick = { /* TODO */ },
+                            onSettingsClick = { currentScreen = Screen.Settings },
                             onStatsClick = { /* TODO */ }
                         )
 
@@ -87,17 +88,20 @@ class MainActivity : ComponentActivity() {
                                 onUsernameChanged = authViewModel::onUsernameChanged,
                                 onSubmit = {
                                     authViewModel.submit()
-                                    // Normally we'd wait for success, but for shell:
                                     if (authUiState.isAuthenticated) currentScreen = Screen.Menu
                                 },
                                 onSwitchToLogin = authViewModel::showLogin,
                                 onSwitchToSignup = authViewModel::showSignup
                             )
                             
-                            // Close auth screen if authenticated
                             if (authUiState.isAuthenticated && currentScreen == Screen.Auth) {
                                 currentScreen = Screen.Menu
                             }
+                        }
+
+                        Screen.Settings -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            SettingsScreen(onBack = { currentScreen = Screen.Menu })
                         }
                     }
                 }
