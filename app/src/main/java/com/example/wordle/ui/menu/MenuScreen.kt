@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +34,12 @@ fun MenuScreen(
     onStatsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showHowToPlay by remember { mutableStateOf(false) }
+
+    if (showHowToPlay) {
+        HowToPlayDialog(onDismiss = { showHowToPlay = false })
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -119,7 +125,7 @@ fun MenuScreen(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        TextButton(onClick = { /* TODO: How to play */ }) {
+        TextButton(onClick = { showHowToPlay = true }) {
             Text(
                 text = "How to play",
                 style = MaterialTheme.typography.bodyLarge,
