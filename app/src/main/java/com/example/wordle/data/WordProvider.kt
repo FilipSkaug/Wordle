@@ -1,10 +1,8 @@
 package com.example.wordle.data
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.google.firebase.firestore.FirebaseFirestore
-import java.time.LocalDate
-import java.time.ZoneId
+import java.util.Calendar
+import java.util.TimeZone
 import kotlin.random.Random
 
 class WordProvider {
@@ -15,14 +13,12 @@ class WordProvider {
      * Returns the daily word based on the current date.
      * The word is deterministically selected from the Firestore `word_bank`.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getDailyWord(onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("Words").document("English").get()
             .addOnSuccessListener { document ->
                 val wordBank = (document["word_bank"] as? List<*>)?.filterIsInstance<String>()
                 if (!wordBank.isNullOrEmpty()) {
-                    val today = LocalDate.now(ZoneId.of("UTC"))
-                    val index = today.toEpochDay().toInt() % wordBank.size
+                    val index = (utcEpochDay() % wordBank.size).toInt()
                     onSuccess(wordBank[index])
                 } else {
                     onFailure(Exception("Word bank is empty or missing."))
@@ -50,5 +46,16 @@ class WordProvider {
             .addOnFailureListener { exception ->
                 onFailure(exception)
             }
+    }
+
+    private fun utcEpochDay(): Long {
+        val tz = TimeZone.getTimeZone("UTC")
+        val cal = Calendar.getInstance(tz)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val millis = cal.timeInMillis
+        return millis / 86_400_000L
     }
 }

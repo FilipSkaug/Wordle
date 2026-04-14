@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wordle.data.WordProvider
 import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.auth.AuthScreen
@@ -70,8 +71,12 @@ class MainActivity : ComponentActivity() {
 
                         Screen.Game -> {
                             val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                            val wordProvider = remember { WordProvider() }
                             val gameViewModel = viewModel<GameViewModel>(
-                                factory = GameViewModelFactory(statsRepository)
+                                factory = GameViewModelFactory(
+                                    statsRepository = statsRepository,
+                                    wordProvider = wordProvider
+                                )
                             )
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 

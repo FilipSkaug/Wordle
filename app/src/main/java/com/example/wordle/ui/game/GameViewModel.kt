@@ -1,16 +1,18 @@
 package com.example.wordle.ui.game
 
 import androidx.lifecycle.ViewModel
+import com.example.wordle.data.WordProvider
 import com.example.wordle.data.stats.StatsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class GameViewModel(
-    private val statsRepository: StatsRepository
+    private val statsRepository: StatsRepository,
+    private val wordProvider: WordProvider
 ) : ViewModel() {
 
-    private val WORD_LENGTH = 5
+    private var targetWord: String? = null
 
     // Track the user's current typing position
     private var currentRowIndex = 0
@@ -20,34 +22,29 @@ class GameViewModel(
     private val _uiState = MutableStateFlow(
         GameUiState(
             rows = List(6) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
-            statusText = "Round 1 of 6",
+            statusText = "Laster dagens ord…",
             stats = statsRepository.load()
         )
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
+    init {
+        loadDailyTargetWord()
+    }
+
     // Logic to handle keyboard clicks
     fun onKeyPress(key: String) {
         val currentState = _uiState.value
+
+        // Disable input until we have the daily target word.
+        if (!currentState.isTargetWordLoaded) return
 
         // Stop accepting input if the game is over (all 6 rows filled)
         if (currentRowIndex >= 6) return
 
         when (key) {
             "ENTER" -> {
-                // Requirement: Add "word finish" when you press enter and make sure there are 5 letters
-                if (currentColIndex == WORD_LENGTH) {
-                    // Move to the next row, reset column
-                    currentRowIndex++
-                    currentColIndex = 0
-
-                    // Update the status text
-                    _uiState.value = currentState.copy(
-                        statusText = if (currentRowIndex < 6) "Round ${currentRowIndex + 1} of 6" else "Game Over"
-                    )
-                } else {
-                    println("Not enough letters! Need $WORD_LENGTH.")
-                }
+                submitGuess()
             }
             "⌫" -> {
                 // Handle Backspace: Move back and clear the tile by setting it to the default empty TileUiState()
@@ -65,6 +62,99 @@ class GameViewModel(
                 }
             }
         }
+    }
+
+    private fun loadDailyTargetWord() {
+        _uiState.value = _uiState.value.copy(
+            isTargetWordLoaded = false,
+            statusText = "Laster dagens ord…"
+        )
+
+        wordProvider.getDailyWord(
+            onSuccess = { word ->
+                targetWord = word
+                _uiState.value = _uiState.value.copy(
+                    isTargetWordLoaded = true,
+                    statusText = "Round 1 of 6"
+                )
+            },
+            onFailure = { ex ->
+                targetWord = null
+                _uiState.value = _uiState.value.copy(
+                    isTargetWordLoaded = false,
+                    statusText = "Kunne ikke laste dagens ord: ${ex.message ?: "ukjent feil"}"
+                )
+            }
+        )
+    }
+
+    private fun submitGuess() {
+        val currentState = _uiState.value
+        val target = targetWord
+        if (target.isNullOrBlank()) {
+            _uiState.value = currentState.copy(statusText = "Mangler dagens ord. Prøv igjen senere.")
+            return
+        }
+
+        if (currentColIndex != WORD_LENGTH) {
+            _uiState.value = currentState.copy(statusText = "Du må skrive $WORD_LENGTH bokstaver før ENTER.")
+            return
+        }
+
+        val guess = buildGuess(currentState, currentRowIndex)
+        val evaluation = WordEvaluator.evaluate(guess, target)
+
+        when (evaluation) {
+            is EvaluationResult.Success -> {
+                applyEvaluationToRow(
+                    currentState = currentState,
+                    rowIndex = currentRowIndex,
+                    states = evaluation.states
+                )
+
+                // Move to the next row, reset column
+                currentRowIndex++
+                currentColIndex = 0
+
+                _uiState.value = _uiState.value.copy(
+                    statusText = if (currentRowIndex < MAX_GUESSES) {
+                        "Round ${currentRowIndex + 1} of 6"
+                    } else {
+                        "Game Over"
+                    }
+                )
+            }
+
+            is EvaluationResult.InvalidLength -> {
+                _uiState.value = currentState.copy(
+                    statusText = "Du må skrive ${evaluation.requiredLength} bokstaver før ENTER."
+                )
+            }
+
+            is EvaluationResult.InvalidTargetLength -> {
+                _uiState.value = currentState.copy(
+                    statusText = "Dagens ord er ugyldig (lengde ${evaluation.providedLength})."
+                )
+            }
+        }
+    }
+
+    private fun buildGuess(state: GameUiState, rowIndex: Int): String {
+        return state.rows[rowIndex].tiles.joinToString(separator = "") { (it.letter ?: ' ').toString() }.trim()
+    }
+
+    private fun applyEvaluationToRow(
+        currentState: GameUiState,
+        rowIndex: Int,
+        states: List<TileVisualState>
+    ) {
+        val newRows = currentState.rows.toMutableList()
+        val row = newRows[rowIndex]
+        val newTiles = row.tiles.mapIndexed { idx, tile ->
+            tile.copy(state = states.getOrElse(idx) { TileVisualState.ABSENT })
+        }
+        newRows[rowIndex] = row.copy(tiles = newTiles)
+        _uiState.value = currentState.copy(rows = newRows)
     }
 
     fun onOpenStats() {
