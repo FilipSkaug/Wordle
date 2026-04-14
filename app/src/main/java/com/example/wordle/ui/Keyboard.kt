@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wordle.ui.theme.WordleTheme
 
 //Defines the states a key can have to handle your coloring requirement
 enum class KeyState {
@@ -29,15 +31,19 @@ fun KeyboardKey(
     // Sends key value back to WordleKeyboard
     onClick: (String) -> Unit
 ) {
-    // Colors based on the state
+    // Colors based on the state using the custom theme
     val backgroundColor = when (state) {
-        KeyState.DEFAULT -> Color.LightGray
-        KeyState.CORRECT -> Color(0xFF538D4E)
-        KeyState.PRESENT -> Color(0xFFB59F3B)
-        KeyState.ABSENT -> Color.DarkGray
+        KeyState.DEFAULT -> MaterialTheme.colorScheme.surfaceVariant
+        KeyState.CORRECT -> WordleTheme.colors.correct
+        KeyState.PRESENT -> WordleTheme.colors.present
+        KeyState.ABSENT -> WordleTheme.colors.absent
     }
 
-    val textColor = if (state == KeyState.DEFAULT) Color.Black else Color.White
+    val textColor = if (state == KeyState.DEFAULT) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        Color.White
+    }
 
     Box(
         modifier = modifier
@@ -118,16 +124,18 @@ fun WordleKeyboard(
 @Preview(showBackground = true)
 @Composable
 fun WordleKeyboardPreview() {
-    val sampleKeyStates = mapOf(
-        'W' to KeyState.CORRECT,
-        'O' to KeyState.PRESENT,
-        'R' to KeyState.ABSENT,
-        'D' to KeyState.CORRECT,
-        'L' to KeyState.PRESENT,
-        'E' to KeyState.ABSENT
-    )
-    WordleKeyboard(
-        keyStates = sampleKeyStates,
-        onKeyPress = {}
-    )
+    WordleTheme {
+        val sampleKeyStates = mapOf(
+            'W' to KeyState.CORRECT,
+            'O' to KeyState.PRESENT,
+            'R' to KeyState.ABSENT,
+            'D' to KeyState.CORRECT,
+            'L' to KeyState.PRESENT,
+            'E' to KeyState.ABSENT
+        )
+        WordleKeyboard(
+            keyStates = sampleKeyStates,
+            onKeyPress = {}
+        )
+    }
 }
