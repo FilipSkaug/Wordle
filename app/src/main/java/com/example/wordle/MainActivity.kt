@@ -20,12 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.auth.AuthScreen
 import com.example.wordle.ui.auth.AuthViewModel
@@ -33,6 +35,7 @@ import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
+import com.example.wordle.ui.game.GameViewModelFactory
 import com.example.wordle.ui.theme.WordleTheme
 
 enum class Screen {
@@ -49,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                 
                 var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
+                var isStatsDialogVisible by rememberSaveable { mutableStateOf(false) }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -59,11 +63,16 @@ class MainActivity : ComponentActivity() {
                             onPlayDaily = { currentScreen = Screen.Game },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
-                            onStatsClick = { /* TODO */ }
+                            onStatsClick = {
+                                isStatsDialogVisible = true
+                            }
                         )
 
                         Screen.Game -> {
-                            val gameViewModel = viewModel<GameViewModel>()
+                            val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                            val gameViewModel = viewModel<GameViewModel>(
+                                factory = GameViewModelFactory(statsRepository)
+                            )
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
                             BackHandler { currentScreen = Screen.Menu }
@@ -71,6 +80,8 @@ class MainActivity : ComponentActivity() {
                             AuthenticatedApp(
                                 gameUiState = gameUiState,
                                 onKeyPress = gameViewModel::onKeyPress,
+                                onOpenStats = gameViewModel::onOpenStats,
+                                onCloseStats = gameViewModel::onCloseStats,
                                 onLogout = {
                                     authViewModel.logout()
                                     currentScreen = Screen.Menu
@@ -105,6 +116,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                if (isStatsDialogVisible) {
+                    val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                    com.example.wordle.ui.stats.StatsDialog(
+                        stats = statsRepository.load(),
+                        onDismiss = { isStatsDialogVisible = false }
+                    )
+                }
             }
         }
     }
@@ -114,6 +133,8 @@ class MainActivity : ComponentActivity() {
 private fun AuthenticatedApp(
     gameUiState: com.example.wordle.ui.game.GameUiState,
     onKeyPress: (String) -> Unit,
+    onOpenStats: () -> Unit,
+    onCloseStats: () -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -133,13 +154,19 @@ private fun AuthenticatedApp(
                 TextButton(onClick = onBack) {
                     Text("Back")
                 }
-                TextButton(onClick = onLogout) {
-                    Text("Log out")
+                Row {
+                    TextButton(onClick = onOpenStats) {
+                        Text("Statistics")
+                    }
+                    TextButton(onClick = onLogout) {
+                        Text("Log out")
+                    }
                 }
             }
 
             GameScreen(
                 uiState = gameUiState,
+                onCloseStats = onCloseStats,
                 modifier = Modifier.weight(1f)
             )
 

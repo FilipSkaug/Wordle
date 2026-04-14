@@ -1,11 +1,14 @@
 package com.example.wordle.ui.game
 
 import androidx.lifecycle.ViewModel
+import com.example.wordle.data.stats.StatsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GameViewModel : ViewModel() {
+class GameViewModel(
+    private val statsRepository: StatsRepository
+) : ViewModel() {
 
     private val WORD_LENGTH = 5
 
@@ -17,7 +20,8 @@ class GameViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(
         GameUiState(
             rows = List(6) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
-            statusText = "Round 1 of 6"
+            statusText = "Round 1 of 6",
+            stats = statsRepository.load()
         )
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -33,8 +37,6 @@ class GameViewModel : ViewModel() {
             "ENTER" -> {
                 // Requirement: Add "word finish" when you press enter and make sure there are 5 letters
                 if (currentColIndex == WORD_LENGTH) {
-                    println("word finish - Row $currentRowIndex locked in!")
-
                     // Move to the next row, reset column
                     currentRowIndex++
                     currentColIndex = 0
@@ -63,6 +65,18 @@ class GameViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    fun onOpenStats() {
+        val latestStats = statsRepository.load()
+        _uiState.value = _uiState.value.copy(
+            stats = latestStats,
+            isStatsDialogVisible = true
+        )
+    }
+
+    fun onCloseStats() {
+        _uiState.value = _uiState.value.copy(isStatsDialogVisible = false)
     }
 
     // Helper function to properly update the deeply nested Compose state
