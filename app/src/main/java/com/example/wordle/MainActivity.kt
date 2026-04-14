@@ -33,6 +33,7 @@ import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
+import com.example.wordle.ui.settings.SettingsViewModel
 import com.example.wordle.ui.theme.WordleTheme
 
 enum class Screen {
@@ -44,7 +45,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            WordleTheme {
+            val settingsViewModel = viewModel<SettingsViewModel>()
+            val isDarkTheme by settingsViewModel.isDarkTheme.collectAsStateWithLifecycle()
+            val isHighContrast by settingsViewModel.isHighContrast.collectAsStateWithLifecycle()
+
+            WordleTheme(
+                darkTheme = isDarkTheme,
+                highContrast = isHighContrast
+            ) {
                 val authViewModel = viewModel<AuthViewModel>()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                 
@@ -101,7 +109,13 @@ class MainActivity : ComponentActivity() {
 
                         Screen.Settings -> {
                             BackHandler { currentScreen = Screen.Menu }
-                            SettingsScreen(onBack = { currentScreen = Screen.Menu })
+                            SettingsScreen(
+                                onBack = { currentScreen = Screen.Menu },
+                                isDarkTheme = isDarkTheme,
+                                isHighContrast = isHighContrast,
+                                onDarkThemeChange = settingsViewModel::toggleDarkTheme,
+                                onHighContrastChange = settingsViewModel::toggleHighContrast
+                            )
                         }
                     }
                 }

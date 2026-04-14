@@ -19,6 +19,10 @@ import com.example.wordle.ui.theme.WordleTheme
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    isDarkTheme: Boolean,
+    isHighContrast: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    onHighContrastChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -54,8 +58,6 @@ fun SettingsScreen(
             )
             
             var hardMode by rememberSaveable { mutableStateOf(false) }
-            var darkTheme by rememberSaveable { mutableStateOf(false) }
-            var highContrast by rememberSaveable { mutableStateOf(false) }
 
             SettingsToggle(
                 label = "Hard Mode",
@@ -66,14 +68,14 @@ fun SettingsScreen(
             SettingsToggle(
                 label = "Dark Theme",
                 description = "Toggle between light and dark themes",
-                checked = darkTheme,
-                onCheckedChange = { darkTheme = it }
+                checked = isDarkTheme,
+                onCheckedChange = onDarkThemeChange
             )
             SettingsToggle(
                 label = "High Contrast Mode",
                 description = "For improved color vision",
-                checked = highContrast,
-                onCheckedChange = { highContrast = it }
+                checked = isHighContrast,
+                onCheckedChange = onHighContrastChange
             )
 
             HorizontalDivider(
@@ -138,6 +140,12 @@ fun SettingsToggle(
 @Composable
 fun SettingsScreenPreview() {
     WordleTheme {
-        SettingsScreen(onBack = {})
+        SettingsScreen(
+            onBack = {},
+            isDarkTheme = false,
+            isHighContrast = false,
+            onDarkThemeChange = {},
+            onHighContrastChange = {}
+        )
     }
 }
