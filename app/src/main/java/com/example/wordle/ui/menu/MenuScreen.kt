@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -58,6 +59,15 @@ fun MenuScreen(
             onClick = onPlayDaily,
             containerColor = WordlePrimaryAction,
             contentColor = WordleSurface
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MenuButton(
+            text = "Custom Game",
+            icon = Icons.Default.Edit,
+            onClick = onPlayCustom,
+            containerColor = WordleSurface,
+            contentColor = WordleTitle
         )
 
         Spacer(modifier = Modifier.height(16.dp))
