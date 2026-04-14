@@ -2,6 +2,7 @@ package com.example.wordle
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +17,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,7 +31,13 @@ import com.example.wordle.ui.auth.AuthScreen
 import com.example.wordle.ui.auth.AuthViewModel
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
+import com.example.wordle.ui.menu.MenuScreen
+import com.example.wordle.ui.settings.SettingsScreen
 import com.example.wordle.ui.theme.WordleTheme
+
+enum class Screen {
+    Menu, Game, Auth, Settings
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,26 +47,63 @@ class MainActivity : ComponentActivity() {
             WordleTheme {
                 val authViewModel = viewModel<AuthViewModel>()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+                
+                var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
 
-                if (authUiState.isAuthenticated) {
-                    val gameViewModel = viewModel<GameViewModel>()
-                    val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    when (currentScreen) {
+                        Screen.Menu -> MenuScreen(
+                            onPlayDaily = { currentScreen = Screen.Game },
+                            onLoginClick = { currentScreen = Screen.Auth },
+                            onSettingsClick = { currentScreen = Screen.Settings },
+                            onStatsClick = { /* TODO */ }
+                        )
 
-                    AuthenticatedApp(
-                        gameUiState = gameUiState,
-                        onKeyPress = gameViewModel::onKeyPress,
-                        onLogout = authViewModel::logout
-                    )
-                } else {
-                    AuthScreen(
-                        uiState = authUiState,
-                        onEmailChanged = authViewModel::onEmailChanged,
-                        onPasswordChanged = authViewModel::onPasswordChanged,
-                        onUsernameChanged = authViewModel::onUsernameChanged,
-                        onSubmit = authViewModel::submit,
-                        onSwitchToLogin = authViewModel::showLogin,
-                        onSwitchToSignup = authViewModel::showSignup
-                    )
+                        Screen.Game -> {
+                            val gameViewModel = viewModel<GameViewModel>()
+                            val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
+
+                            BackHandler { currentScreen = Screen.Menu }
+                            
+                            AuthenticatedApp(
+                                gameUiState = gameUiState,
+                                onKeyPress = gameViewModel::onKeyPress,
+                                onLogout = {
+                                    authViewModel.logout()
+                                    currentScreen = Screen.Menu
+                                },
+                                onBack = { currentScreen = Screen.Menu }
+                            )
+                        }
+
+                        Screen.Auth -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            
+                            LaunchedEffect(authUiState.isAuthenticated) {
+                                if (authUiState.isAuthenticated) {
+                                    currentScreen = Screen.Menu
+                                }
+                            }
+                            
+                            AuthScreen(
+                                uiState = authUiState,
+                                onEmailChanged = authViewModel::onEmailChanged,
+                                onPasswordChanged = authViewModel::onPasswordChanged,
+                                onUsernameChanged = authViewModel::onUsernameChanged,
+                                onSubmit = { authViewModel.submit() },
+                                onSwitchToLogin = authViewModel::showLogin,
+                                onSwitchToSignup = authViewModel::showSignup
+                            )
+                        }
+
+                        Screen.Settings -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            SettingsScreen(onBack = { currentScreen = Screen.Menu })
+                        }
+                    }
                 }
             }
         }
@@ -66,40 +114,39 @@ class MainActivity : ComponentActivity() {
 private fun AuthenticatedApp(
     gameUiState: com.example.wordle.ui.game.GameUiState,
     onKeyPress: (String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onBack: () -> Unit
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Surface(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            color = MaterialTheme.colorScheme.background
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onLogout) {
-                        Text("Log out")
-                    }
+                TextButton(onClick = onBack) {
+                    Text("Back")
                 }
-
-                GameScreen(
-                    uiState = gameUiState,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Keyboard at the bottom
-                WordleKeyboard(
-                    onKeyPress = onKeyPress
-                )
+                TextButton(onClick = onLogout) {
+                    Text("Log out")
+                }
             }
+
+            GameScreen(
+                uiState = gameUiState,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Keyboard at the bottom
+            WordleKeyboard(
+                onKeyPress = onKeyPress
+            )
         }
     }
 }
