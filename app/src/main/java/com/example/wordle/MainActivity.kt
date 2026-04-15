@@ -80,6 +80,10 @@ class MainActivity : ComponentActivity() {
                             )
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
+                            LaunchedEffect(Unit) {
+                                gameViewModel.onGameStart()
+                            }
+
                             BackHandler { currentScreen = Screen.Menu }
                             
                             AuthenticatedApp(

@@ -13,6 +13,7 @@ class GameViewModel(
 ) : ViewModel() {
 
     private var targetWord: String? = null
+    private var hasRequestedDailyWord: Boolean = false
 
     // Track the user's current typing position
     private var currentRowIndex = 0
@@ -22,13 +23,17 @@ class GameViewModel(
     private val _uiState = MutableStateFlow(
         GameUiState(
             rows = List(6) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
-            statusText = "Laster dagens ord…",
+            statusText = "Loading today's word…",
             stats = statsRepository.load()
         )
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
-    init {
+    fun onGameStart() {
+        // Decouple daily-word loading from ViewModel creation. This avoids loading the word
+        // just because the ViewModel was instantiated (e.g. due to navigation/back stack reuse).
+        if (hasRequestedDailyWord) return
+        hasRequestedDailyWord = true
         loadDailyTargetWord()
     }
 
@@ -67,7 +72,7 @@ class GameViewModel(
     private fun loadDailyTargetWord() {
         _uiState.value = _uiState.value.copy(
             isTargetWordLoaded = false,
-            statusText = "Laster dagens ord…"
+            statusText = "Loading today's word…"
         )
 
         wordProvider.getDailyWord(
@@ -82,7 +87,7 @@ class GameViewModel(
                 targetWord = null
                 _uiState.value = _uiState.value.copy(
                     isTargetWordLoaded = false,
-                    statusText = "Kunne ikke laste dagens ord: ${ex.message ?: "ukjent feil"}"
+                    statusText = "Couldn't load today's word: ${ex.message ?: "unknown error"}"
                 )
             }
         )
@@ -92,12 +97,12 @@ class GameViewModel(
         val currentState = _uiState.value
         val target = targetWord
         if (target.isNullOrBlank()) {
-            _uiState.value = currentState.copy(statusText = "Mangler dagens ord. Prøv igjen senere.")
+            _uiState.value = currentState.copy(statusText = "Today's word is missing. Please try again later.")
             return
         }
 
         if (currentColIndex != WORD_LENGTH) {
-            _uiState.value = currentState.copy(statusText = "Du må skrive $WORD_LENGTH bokstaver før ENTER.")
+            _uiState.value = currentState.copy(statusText = "You must type $WORD_LENGTH letters before ENTER.")
             return
         }
 
@@ -127,13 +132,13 @@ class GameViewModel(
 
             is EvaluationResult.InvalidLength -> {
                 _uiState.value = currentState.copy(
-                    statusText = "Du må skrive ${evaluation.requiredLength} bokstaver før ENTER."
+                    statusText = "You must type ${evaluation.requiredLength} letters before ENTER."
                 )
             }
 
             is EvaluationResult.InvalidTargetLength -> {
                 _uiState.value = currentState.copy(
-                    statusText = "Dagens ord er ugyldig (lengde ${evaluation.providedLength})."
+                    statusText = "Today's word is invalid (length ${evaluation.providedLength})."
                 )
             }
         }

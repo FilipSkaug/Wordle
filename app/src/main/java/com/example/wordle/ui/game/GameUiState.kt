@@ -17,7 +17,7 @@ data class GameUiState(
     val rows: List<GuessRowUiState> = List(MAX_GUESSES) {
         GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
     },
-    val statusText: String = "Laster dagens ord…",
+    val statusText: String = "Loading today's word…",
     val stats: UserStats = UserStats(),
     val isStatsDialogVisible: Boolean = false,
     val isTargetWordLoaded: Boolean = false
