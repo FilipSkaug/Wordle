@@ -117,11 +117,18 @@ class GameViewModel(
                     states = evaluation.states
                 )
 
+                val nextKeyStates = reduceKeyboardKeyStates(
+                    previous = currentState.keyStates,
+                    guess = guess,
+                    states = evaluation.states
+                )
+
                 // Move to the next row, reset column
                 currentRowIndex++
                 currentColIndex = 0
 
                 _uiState.value = _uiState.value.copy(
+                    keyStates = nextKeyStates,
                     statusText = if (currentRowIndex < MAX_GUESSES) {
                         "Round ${currentRowIndex + 1} of 6"
                     } else {

@@ -181,6 +181,7 @@ private fun AuthenticatedApp(
 
             // Keyboard at the bottom
             WordleKeyboard(
+                keyStates = gameUiState.keyStates,
                 onKeyPress = onKeyPress
             )
         }
