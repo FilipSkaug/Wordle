@@ -34,9 +34,11 @@ import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
 import com.example.wordle.ui.theme.WordleTheme
+import com.example.wordle.ui.user.UserScreen // <-- NEW IMPORT ADDED HERE
 
+// 1. ADDED "User" TO THE ENUM
 enum class Screen {
-    Menu, Game, Auth, Settings
+    Menu, Game, Auth, Settings, User
 }
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +49,7 @@ class MainActivity : ComponentActivity() {
             WordleTheme {
                 val authViewModel = viewModel<AuthViewModel>()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                
+
                 var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
 
                 Surface(
@@ -56,10 +58,12 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (currentScreen) {
                         Screen.Menu -> MenuScreen(
+                            isAuthenticated = authUiState.isAuthenticated,
+                            onProfileClick = { currentScreen = Screen.User },
                             onPlayDaily = { currentScreen = Screen.Game },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
-                            onStatsClick = { /* TODO */ }
+                            onStatsClick = {}
                         )
 
                         Screen.Game -> {
@@ -67,7 +71,7 @@ class MainActivity : ComponentActivity() {
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
                             BackHandler { currentScreen = Screen.Menu }
-                            
+
                             AuthenticatedApp(
                                 gameUiState = gameUiState,
                                 onKeyPress = gameViewModel::onKeyPress,
@@ -81,13 +85,13 @@ class MainActivity : ComponentActivity() {
 
                         Screen.Auth -> {
                             BackHandler { currentScreen = Screen.Menu }
-                            
+
                             LaunchedEffect(authUiState.isAuthenticated) {
                                 if (authUiState.isAuthenticated) {
                                     currentScreen = Screen.Menu
                                 }
                             }
-                            
+
                             AuthScreen(
                                 uiState = authUiState,
                                 onEmailChanged = authViewModel::onEmailChanged,
@@ -103,7 +107,17 @@ class MainActivity : ComponentActivity() {
                             BackHandler { currentScreen = Screen.Menu }
                             SettingsScreen(onBack = { currentScreen = Screen.Menu })
                         }
-                    }
+
+                        Screen.User -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            UserScreen(
+                                onNavigateBack = { currentScreen = Screen.Menu },
+                                onLogout = {
+                                    authViewModel.logout() // Clear Firebase auth state
+                                    currentScreen = Screen.Menu // Send back to menu
+                                }
+                            )
+                    }}
                 }
             }
         }
@@ -143,7 +157,7 @@ private fun AuthenticatedApp(
                 modifier = Modifier.weight(1f)
             )
 
-            // Keyboard at the bottom
+
             WordleKeyboard(
                 onKeyPress = onKeyPress
             )
