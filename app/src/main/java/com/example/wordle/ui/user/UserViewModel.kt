@@ -26,39 +26,55 @@ class UserViewModel(
         loadUser()
     }
 
-    private fun loadUser() {
+    fun loadUser() {
         val user = authRepository.getCurrentUser()
         if (user != null) {
             _uiState.value = UserUiState(
                 username = user.username ?: "Unknown",
                 email = user.email
             )
+        } else {
+            _uiState.value = UserUiState()
         }
     }
 
-    fun changePassword(newPassword: String) {
+    fun changePassword(currentPassword: String, newPassword: String) {
         viewModelScope.launch {
-            val result = authRepository.changePassword(newPassword)
+            val result = authRepository.changePassword(currentPassword, newPassword)
             if (result.isSuccess) {
                 _uiState.value = _uiState.value.copy(message = "Password updated successfully!")
             } else {
-                _uiState.value = _uiState.value.copy(message = "Error updating password. Try logging in again.")
+                _uiState.value = _uiState.value.copy(message = "Incorrect current password or error updating.")
             }
         }
     }
 
-    fun deleteAccount(onSuccess: () -> Unit) {
+    fun deleteAccount(currentPassword: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val result = authRepository.deleteAccount()
+            val result = authRepository.deleteAccount(currentPassword)
             if (result.isSuccess) {
                 onSuccess()
             } else {
-                _uiState.value = _uiState.value.copy(message = "Error deleting account.")
+                _uiState.value = _uiState.value.copy(message = "Incorrect password. Could not delete account.")
             }
         }
     }
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
+    }
+
+    fun changeUsername(newUsername: String) {
+        viewModelScope.launch {
+            val result = authRepository.changeUsername(newUsername)
+            if (result.isSuccess) {
+                _uiState.value = _uiState.value.copy(
+                    username = newUsername,
+                    message = "Username updated successfully!"
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(message = "Error updating username.")
+            }
+        }
     }
 }

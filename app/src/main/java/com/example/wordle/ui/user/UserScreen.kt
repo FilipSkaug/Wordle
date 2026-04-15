@@ -1,5 +1,6 @@
 package com.example.wordle.ui.user
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -8,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -26,16 +28,22 @@ fun UserScreen(
     viewModel: UserViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
+    val context = LocalContext.current
+    var showUsernameDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var newUsername by remember { mutableStateOf("") }
+    var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
 
-    // Show Snackbars for success/error messages
+    LaunchedEffect(Unit) {
+        viewModel.loadUser()
+    }
+
     LaunchedEffect(uiState.message) {
         if (uiState.message != null) {
-            // Real apps use SnackbarHost, but we'll keep it simple for now
-            println(uiState.message)
+            Toast.makeText(context, uiState.message, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
         }
     }
@@ -73,6 +81,11 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            Button(onClick = { showUsernameDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Change Username")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
             Button(onClick = { showPasswordDialog = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Change Password")
             }
@@ -86,48 +99,108 @@ fun UserScreen(
             }
         }
 
-        // Change Password Dialog
-        if (showPasswordDialog) {
+        if (showUsernameDialog) {
             AlertDialog(
-                onDismissRequest = { showPasswordDialog = false },
-                title = { Text("New Password") },
+                onDismissRequest = { showUsernameDialog = false },
+                title = { Text("Change Username") },
                 text = {
                     OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
+                        value = newUsername,
+                        onValueChange = { newUsername = it },
+                        singleLine = true,
+                        label = { Text("New Username") }
                     )
                 },
                 confirmButton = {
                     Button(onClick = {
-                        viewModel.changePassword(newPassword)
-                        showPasswordDialog = false
+                        if (newUsername.isNotBlank()) {
+                            viewModel.changeUsername(newUsername)
+                            showUsernameDialog = false
+                            newUsername = "" // Clear the input field
+                        }
                     }) { Text("Update") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel") }
+                    TextButton(onClick = { showUsernameDialog = false }) { Text("Cancel") }
                 }
             )
         }
 
-        // Delete Account Dialog
+        if (showPasswordDialog) {
+            AlertDialog(
+                onDismissRequest = { showPasswordDialog = false },
+                title = { Text("Change Password") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = currentPassword,
+                            onValueChange = { currentPassword = it },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            label = { Text("Current Password") }
+                        )
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            label = { Text("New Password") }
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (currentPassword.isNotBlank() && newPassword.isNotBlank()) {
+                            viewModel.changePassword(currentPassword, newPassword)
+                            showPasswordDialog = false
+                            currentPassword = ""
+                            newPassword = ""
+                        }
+                    }) { Text("Update") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showPasswordDialog = false
+                        currentPassword = ""
+                        newPassword = ""
+                    }) { Text("Cancel") }
+                }
+            )
+        }
+
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
                 title = { Text("Delete Account") },
-                text = { Text("Are you sure? This action cannot be undone and you will lose all game stats.") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("This action cannot be undone. Please enter your password to confirm.")
+                        OutlinedTextField(
+                            value = currentPassword,
+                            onValueChange = { currentPassword = it },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            label = { Text("Confirm Password") }
+                        )
+                    }
+                },
                 confirmButton = {
                     Button(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         onClick = {
-                            viewModel.deleteAccount(onSuccess = onLogout)
-                            showDeleteDialog = false
+                            if (currentPassword.isNotBlank()) {
+                                viewModel.deleteAccount(currentPassword, onSuccess = onLogout)
+                                showDeleteDialog = false
+                                currentPassword = ""
+                            }
                         }
                     ) { Text("Delete Forever") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        currentPassword = ""
+                    }) { Text("Cancel") }
                 }
             )
         }
