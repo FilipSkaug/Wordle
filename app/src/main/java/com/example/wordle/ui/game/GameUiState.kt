@@ -1,6 +1,8 @@
 package com.example.wordle.ui.game
 
 import androidx.compose.ui.graphics.Color
+import com.example.wordle.data.stats.UserStats
+import com.example.wordle.ui.KeyState
 import com.example.wordle.ui.theme.TileAbsent
 import com.example.wordle.ui.theme.TileCorrect
 import com.example.wordle.ui.theme.TileEmptyBackground
@@ -16,7 +18,11 @@ data class GameUiState(
     val rows: List<GuessRowUiState> = List(MAX_GUESSES) {
         GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
     },
-    val statusText: String = "Guess the 5-letter word"
+    val statusText: String = "Loading today's word…",
+    val stats: UserStats = UserStats(),
+    val isStatsDialogVisible: Boolean = false,
+    val isTargetWordLoaded: Boolean = false,
+    val keyStates: Map<Char, KeyState> = emptyMap()
 )
 
 data class GuessRowUiState(

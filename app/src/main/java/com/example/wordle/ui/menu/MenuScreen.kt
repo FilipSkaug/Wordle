@@ -63,7 +63,7 @@ fun MenuScreen(
 
         Row(modifier = Modifier.fillMaxWidth()) {
             MenuButton(
-                text = "Stats",
+                text = "Statistics",
                 icon = Icons.Default.BarChart,
                 onClick = onStatsClick,
                 modifier = Modifier.weight(1f)

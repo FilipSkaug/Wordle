@@ -28,10 +28,12 @@ import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordleTextSecondary
 import com.example.wordle.ui.theme.WordleTheme
 import com.example.wordle.ui.theme.WordleTitle
+import com.example.wordle.ui.stats.StatsDialog
 
 @Composable
 fun GameScreen(
     uiState: GameUiState,
+    onCloseStats: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -67,8 +69,14 @@ fun GameScreen(
             GuessGrid(rows = uiState.rows)
 
             Spacer(modifier = Modifier.weight(1f))
-
         }
+    }
+
+    if (uiState.isStatsDialogVisible) {
+        StatsDialog(
+            stats = uiState.stats,
+            onDismiss = onCloseStats
+        )
     }
 }
 
@@ -146,7 +154,9 @@ private fun GameScreenPreview() {
                     GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
                 ),
                 statusText = "Round 1 of 6"
-            )
+            ),
+            onCloseStats = {},
+            modifier = Modifier
         )
     }
 }
