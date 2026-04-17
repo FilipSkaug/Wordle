@@ -37,12 +37,22 @@ class GameViewModel(
         loadDailyTargetWord()
     }
 
+    fun onLeaveGameScreen() {
+        // When returning later the same day, show the board instead of the result screen.
+        if (_uiState.value.isResultScreenVisible) {
+            _uiState.value = _uiState.value.copy(isResultScreenVisible = false)
+        }
+    }
+
     // Logic to handle keyboard clicks
     fun onKeyPress(key: String) {
         val currentState = _uiState.value
 
         // Disable input until we have the daily target word.
         if (!currentState.isTargetWordLoaded) return
+
+        // Stop accepting input if the game has ended.
+        if (currentState.gameOutcome != null) return
 
         // Stop accepting input if the game is over (all 6 rows filled)
         if (currentRowIndex >= 6) return
@@ -101,6 +111,8 @@ class GameViewModel(
             return
         }
 
+        if (currentState.gameOutcome != null) return
+
         if (currentColIndex != WORD_LENGTH) {
             _uiState.value = currentState.copy(statusText = "You must type $WORD_LENGTH letters before ENTER.")
             return
@@ -111,7 +123,7 @@ class GameViewModel(
 
         when (evaluation) {
             is EvaluationResult.Success -> {
-                applyEvaluationToRow(
+                val nextRows = evaluatedRows(
                     currentState = currentState,
                     rowIndex = currentRowIndex,
                     states = evaluation.states
@@ -123,17 +135,58 @@ class GameViewModel(
                     states = evaluation.states
                 )
 
+                val isWin = WordEvaluator.isCorrectWord(guess, target)
+                val isLastAttempt = currentRowIndex == MAX_GUESSES - 1
+
+                if (isWin) {
+                    val attempts = currentRowIndex + 1
+                    val updatedStats = updateStatsForGameEnd(
+                        current = statsRepository.load(),
+                        outcome = GameOutcome.WON,
+                        attempts = attempts
+                    )
+                    statsRepository.save(updatedStats)
+
+                    _uiState.value = currentState.copy(
+                        rows = nextRows,
+                        keyStates = nextKeyStates,
+                        stats = updatedStats,
+                        gameOutcome = GameOutcome.WON,
+                        revealedTargetWord = target,
+                        isResultScreenVisible = true,
+                        statusText = "You won"
+                    )
+                    return
+                }
+
+                if (isLastAttempt) {
+                    val updatedStats = updateStatsForGameEnd(
+                        current = statsRepository.load(),
+                        outcome = GameOutcome.LOST,
+                        attempts = null
+                    )
+                    statsRepository.save(updatedStats)
+
+                    _uiState.value = currentState.copy(
+                        rows = nextRows,
+                        keyStates = nextKeyStates,
+                        stats = updatedStats,
+                        gameOutcome = GameOutcome.LOST,
+                        revealedTargetWord = target,
+                        isResultScreenVisible = true,
+                        statusText = "You lost"
+                    )
+                    return
+                }
+
                 // Move to the next row, reset column
                 currentRowIndex++
                 currentColIndex = 0
 
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = currentState.copy(
+                    rows = nextRows,
                     keyStates = nextKeyStates,
-                    statusText = if (currentRowIndex < MAX_GUESSES) {
-                        "Round ${currentRowIndex + 1} of 6"
-                    } else {
-                        "Game Over"
-                    }
+                    statusText = "Round ${currentRowIndex + 1} of 6"
                 )
             }
 
@@ -155,18 +208,18 @@ class GameViewModel(
         return state.rows[rowIndex].tiles.joinToString(separator = "") { (it.letter ?: ' ').toString() }.trim()
     }
 
-    private fun applyEvaluationToRow(
+    private fun evaluatedRows(
         currentState: GameUiState,
         rowIndex: Int,
         states: List<TileVisualState>
-    ) {
+    ): List<GuessRowUiState> {
         val newRows = currentState.rows.toMutableList()
         val row = newRows[rowIndex]
         val newTiles = row.tiles.mapIndexed { idx, tile ->
             tile.copy(state = states.getOrElse(idx) { TileVisualState.ABSENT })
         }
         newRows[rowIndex] = row.copy(tiles = newTiles)
-        _uiState.value = currentState.copy(rows = newRows)
+        return newRows
     }
 
     fun onOpenStats() {
@@ -193,5 +246,40 @@ class GameViewModel(
         // Re-package it back up
         newRows[r] = currentRowState.copy(tiles = newTiles)
         _uiState.value = currentState.copy(rows = newRows)
+    }
+
+    private fun updateStatsForGameEnd(
+        current: com.example.wordle.data.stats.UserStats,
+        outcome: GameOutcome,
+        attempts: Int?
+    ): com.example.wordle.data.stats.UserStats {
+        val played = current.gamesPlayed + 1
+
+        return when (outcome) {
+            GameOutcome.WON -> {
+                val won = current.gamesWon + 1
+                val nextDist = current.guessDistribution.toMutableList()
+                val idx = ((attempts ?: 1) - 1).coerceIn(0, nextDist.lastIndex)
+                nextDist[idx] = nextDist[idx] + 1
+
+                val nextStreak = current.currentStreak + 1
+                val nextMaxStreak = maxOf(current.maxStreak, nextStreak)
+
+                current.copy(
+                    gamesPlayed = played,
+                    gamesWon = won,
+                    guessDistribution = nextDist,
+                    currentStreak = nextStreak,
+                    maxStreak = nextMaxStreak
+                )
+            }
+
+            GameOutcome.LOST -> {
+                current.copy(
+                    gamesPlayed = played,
+                    currentStreak = 0
+                )
+            }
+        }
     }
 }

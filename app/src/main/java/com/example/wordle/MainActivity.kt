@@ -65,7 +65,10 @@ class MainActivity : ComponentActivity() {
                         Screen.Menu -> MenuScreen(
                             isAuthenticated = authUiState.isAuthenticated,
                             onProfileClick = { currentScreen = Screen.User },
-                            onPlayDaily = { currentScreen = Screen.Game },
+                            onPlayDaily = {
+                                isStatsDialogVisible = false
+                                currentScreen = Screen.Game
+                            },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
                             onStatsClick = {
@@ -88,7 +91,10 @@ class MainActivity : ComponentActivity() {
                                 gameViewModel.onGameStart()
                             }
 
-                            BackHandler { currentScreen = Screen.Menu }
+                            BackHandler {
+                                gameViewModel.onLeaveGameScreen()
+                                currentScreen = Screen.Menu
+                            }
 
                             AuthenticatedApp(
                                 gameUiState = gameUiState,
@@ -99,7 +105,11 @@ class MainActivity : ComponentActivity() {
                                     authViewModel.logout()
                                     currentScreen = Screen.Menu
                                 },
-                                onBack = { currentScreen = Screen.Menu }
+                                onBack = {
+                                    gameViewModel.onCloseStats()
+                                    gameViewModel.onLeaveGameScreen()
+                                    currentScreen = Screen.Menu
+                                }
                             )
                         }
 
@@ -193,11 +203,12 @@ private fun AuthenticatedApp(
                 modifier = Modifier.weight(1f)
             )
 
-
-            WordleKeyboard(
-                keyStates = gameUiState.keyStates,
-                onKeyPress = onKeyPress
-            )
+            if (gameUiState.gameOutcome == null) {
+                WordleKeyboard(
+                    keyStates = gameUiState.keyStates,
+                    onKeyPress = onKeyPress
+                )
+            }
         }
     }
 }

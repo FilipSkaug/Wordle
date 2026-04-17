@@ -41,34 +41,45 @@ fun StatsDialog(
         },
         title = { Text("Statistics") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    StatNumber(label = "Played", value = stats.gamesPlayed.toString())
-                    StatNumber(label = "Won", value = stats.gamesWon.toString())
-                    StatNumber(label = "Win rate", value = "${stats.winRatePercent}%")
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    StatNumber(label = "Streak", value = stats.currentStreak.toString())
-                    StatNumber(label = "Max", value = stats.maxStreak.toString())
-                }
-
-                Text(
-                    text = "Guess distribution",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                GuessDistribution(distribution = stats.guessDistribution)
-            }
+            StatsContent(stats = stats)
         }
     )
+}
+
+@Composable
+fun StatsContent(
+    stats: UserStats,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            StatNumber(label = "Played", value = stats.gamesPlayed.toString())
+            StatNumber(label = "Won", value = stats.gamesWon.toString())
+            StatNumber(label = "Win rate", value = "${stats.winRatePercent}%")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            StatNumber(label = "Streak", value = stats.currentStreak.toString())
+            StatNumber(label = "Max", value = stats.maxStreak.toString())
+        }
+
+        Text(
+            text = "Guess distribution",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        GuessDistribution(distribution = stats.guessDistribution)
+    }
 }
 
 @Composable

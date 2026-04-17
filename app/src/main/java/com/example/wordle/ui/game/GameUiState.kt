@@ -14,6 +14,11 @@ import com.example.wordle.ui.theme.WordleTextPrimary
 const val WORD_LENGTH = 5
 const val MAX_GUESSES = 6
 
+enum class GameOutcome {
+    WON,
+    LOST
+}
+
 data class GameUiState(
     val rows: List<GuessRowUiState> = List(MAX_GUESSES) {
         GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
@@ -22,7 +27,15 @@ data class GameUiState(
     val stats: UserStats = UserStats(),
     val isStatsDialogVisible: Boolean = false,
     val isTargetWordLoaded: Boolean = false,
-    val keyStates: Map<Char, KeyState> = emptyMap()
+    val keyStates: Map<Char, KeyState> = emptyMap(),
+    val gameOutcome: GameOutcome? = null,
+    val revealedTargetWord: String? = null,
+    /**
+     * Controls whether the end-of-game screen (You won/You lost + stats) should be shown.
+     * The game can be finished (gameOutcome != null) while this is false, e.g. when returning
+     * to today's already-played board from the menu.
+     */
+    val isResultScreenVisible: Boolean = false
 )
 
 data class GuessRowUiState(
