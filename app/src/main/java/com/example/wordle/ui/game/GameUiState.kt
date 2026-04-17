@@ -18,11 +18,14 @@ data class GameUiState(
     val rows: List<GuessRowUiState> = List(MAX_GUESSES) {
         GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
     },
-    val statusText: String = "Loading today's word…",
+    val statusText: String = "Loading word...",
     val stats: UserStats = UserStats(),
     val isStatsDialogVisible: Boolean = false,
     val isTargetWordLoaded: Boolean = false,
-    val keyStates: Map<Char, KeyState> = emptyMap()
+    val keyStates: Map<Char, KeyState> = emptyMap(),
+    val maxGuesses: Int = MAX_GUESSES,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 data class GuessRowUiState(
