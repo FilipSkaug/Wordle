@@ -28,6 +28,7 @@ fun MenuScreen(
     isAuthenticated: Boolean,
     onProfileClick: () -> Unit,
     onPlayDaily: () -> Unit,
+    onPlayCustom: () -> Unit,
     onLoginClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onStatsClick: () -> Unit,
@@ -55,6 +56,16 @@ fun MenuScreen(
             text = "Daily Wordle",
             icon = Icons.Default.PlayArrow,
             onClick = onPlayDaily,
+            containerColor = WordlePrimaryAction,
+            contentColor = WordleSurface
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MenuButton(
+            text = "Custom Wordle",
+            icon = Icons.Default.PlayArrow,
+            onClick = onPlayCustom,
             containerColor = WordlePrimaryAction,
             contentColor = WordleSurface
         )
@@ -159,6 +170,7 @@ fun MenuScreenPreview() {
         isAuthenticated = false,
         onProfileClick = {},
         onPlayDaily = {},
+        onPlayCustom = {},
         onLoginClick = {},
         onSettingsClick = {},
         onStatsClick = {}

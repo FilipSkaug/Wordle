@@ -69,30 +69,52 @@ fun GameScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-
-            val showResult = uiState.gameOutcome != null && uiState.isResultScreenVisible
-            if (showResult) {
-                GameResultContent(
-                    outcome = uiState.gameOutcome,
-                    targetWord = uiState.revealedTargetWord,
-                    stats = uiState.stats,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+            uiState.errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = WordleTextSecondary,
+                    textAlign = TextAlign.Center
                 )
-            } else {
-                if (uiState.gameOutcome != null) {
-                    AlreadyPlayedBanner(
-                        outcome = uiState.gameOutcome,
-                        targetWord = uiState.revealedTargetWord
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-                GuessGrid(rows = uiState.rows)
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val showResult = uiState.gameOutcome != null && uiState.isResultScreenVisible
+                if (showResult) {
+                    GameResultContent(
+                        outcome = uiState.gameOutcome,
+                        targetWord = uiState.revealedTargetWord,
+                        stats = uiState.stats,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (uiState.gameOutcome != null) {
+                            AlreadyPlayedBanner(
+                                outcome = uiState.gameOutcome,
+                                targetWord = uiState.revealedTargetWord
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        GuessGrid(rows = uiState.rows)
+                    }
+                }
+            }
         }
     }
 

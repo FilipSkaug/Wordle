@@ -32,17 +32,19 @@ import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.auth.AuthScreen
 import com.example.wordle.ui.auth.AuthViewModel
+import com.example.wordle.ui.game.GameConfig
+import com.example.wordle.ui.game.GameMode
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
+import com.example.wordle.ui.game.GameViewModelFactory
+import com.example.wordle.ui.menu.CustomGameSetupScreen
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
-import com.example.wordle.ui.game.GameViewModelFactory
 import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.user.UserScreen // <-- NEW IMPORT ADDED HERE
+import com.example.wordle.ui.user.UserScreen
 
-// 1. ADDED "User" TO THE ENUM
 enum class Screen {
-    Menu, Game, Auth, Settings, User
+    Menu, Game, Auth, Settings, User, CustomSetup
 }
 
 class MainActivity : ComponentActivity() {
@@ -56,6 +58,14 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
                 var isStatsDialogVisible by rememberSaveable { mutableStateOf(false) }
+                var selectedCustomGuesses by rememberSaveable { mutableStateOf(MAX_CUSTOM_GUESSES_DEFAULT) }
+                var currentGameMode by rememberSaveable { mutableStateOf(GameMode.DAILY.name) }
+                var currentMaxGuesses by rememberSaveable { mutableStateOf(DEFAULT_DAILY_GUESSES) }
+
+                val currentGameConfig = GameConfig(
+                    mode = GameMode.valueOf(currentGameMode),
+                    maxGuesses = currentMaxGuesses
+                )
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -67,14 +77,29 @@ class MainActivity : ComponentActivity() {
                             onProfileClick = { currentScreen = Screen.User },
                             onPlayDaily = {
                                 isStatsDialogVisible = false
+                                currentGameMode = GameMode.DAILY.name
+                                currentMaxGuesses = DEFAULT_DAILY_GUESSES
                                 currentScreen = Screen.Game
                             },
+                            onPlayCustom = { currentScreen = Screen.CustomSetup },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
-                            onStatsClick = {
-                                isStatsDialogVisible = true
-                            }
+                            onStatsClick = { isStatsDialogVisible = true }
                         )
+
+                        Screen.CustomSetup -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            CustomGameSetupScreen(
+                                selectedGuesses = selectedCustomGuesses,
+                                onGuessesChanged = { selectedCustomGuesses = it },
+                                onStartGame = {
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = selectedCustomGuesses
+                                    currentScreen = Screen.Game
+                                },
+                                onBack = { currentScreen = Screen.Menu }
+                            )
+                        }
 
                         Screen.Game -> {
                             val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
@@ -87,8 +112,8 @@ class MainActivity : ComponentActivity() {
                             )
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
-                            LaunchedEffect(Unit) {
-                                gameViewModel.onGameStart()
+                            LaunchedEffect(currentGameConfig.mode, currentGameConfig.maxGuesses) {
+                                gameViewModel.startGame(currentGameConfig)
                             }
 
                             BackHandler {
@@ -127,7 +152,7 @@ class MainActivity : ComponentActivity() {
                                 onEmailChanged = authViewModel::onEmailChanged,
                                 onPasswordChanged = authViewModel::onPasswordChanged,
                                 onUsernameChanged = authViewModel::onUsernameChanged,
-                                onSubmit = { authViewModel.submit() },
+                                onSubmit = authViewModel::submit,
                                 onSwitchToLogin = authViewModel::showLogin,
                                 onSwitchToSignup = authViewModel::showSignup
                             )
@@ -143,11 +168,12 @@ class MainActivity : ComponentActivity() {
                             UserScreen(
                                 onNavigateBack = { currentScreen = Screen.Menu },
                                 onLogout = {
-                                    authViewModel.logout() // Clear Firebase auth state
-                                    currentScreen = Screen.Menu // Send back to menu
+                                    authViewModel.logout()
+                                    currentScreen = Screen.Menu
                                 }
                             )
-                    }}
+                        }
+                    }
                 }
 
                 if (isStatsDialogVisible) {
@@ -212,3 +238,6 @@ private fun AuthenticatedApp(
         }
     }
 }
+
+private const val DEFAULT_DAILY_GUESSES = 6
+private const val MAX_CUSTOM_GUESSES_DEFAULT = 6
