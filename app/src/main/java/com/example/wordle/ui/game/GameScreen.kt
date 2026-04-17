@@ -1,5 +1,6 @@
 package com.example.wordle.ui.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -192,7 +194,9 @@ private fun GuessGrid(
     ) {
         rows.forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (row.isShaking) Modifier.shake() else Modifier), // Apply shake animation if isShaking is true
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 row.tiles.forEach { tile ->
@@ -201,6 +205,20 @@ private fun GuessGrid(
             }
         }
     }
+}
+
+@Composable
+private fun Modifier.shake(): Modifier {
+    val infiniteTransition = rememberInfiniteTransition()
+    val offsetX = infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 100, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    ).value
+    return this.graphicsLayer(translationX = offsetX)
 }
 
 @Composable

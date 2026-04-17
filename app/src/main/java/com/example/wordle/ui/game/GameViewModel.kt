@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import com.example.wordle.data.WordProvider
 import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.StatsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class GameViewModel(
     private val statsRepository: StatsRepository,
@@ -166,103 +170,136 @@ class GameViewModel(
         }
 
         val guess = buildGuess(currentState, currentRowIndex)
-        val evaluation = WordEvaluator.evaluate(guess, target)
 
-        when (evaluation) {
-            is EvaluationResult.Success -> {
-                val nextRows = evaluatedRows(
-                    currentState = currentState,
-                    rowIndex = currentRowIndex,
-                    states = evaluation.states
+        // Validate the word using WordProvider
+        wordProvider.isWordValid(guess, onSuccess = { isValid ->
+            if (!isValid) {
+                // Shake the current row and allow editing
+                val updatedRows = currentState.rows.toMutableList()
+                val currentRow = updatedRows[currentRowIndex]
+                updatedRows[currentRowIndex] = currentRow.copy(isShaking = true)
+
+                _uiState.value = currentState.copy(
+                    rows = updatedRows,
+                    errorMessage = null
                 )
 
-                val nextKeyStates = reduceKeyboardKeyStates(
-                    previous = currentState.keyStates,
-                    guess = guess,
-                    states = evaluation.states
-                )
+                // Stop shaking after a delay
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(500) // Adjust delay as needed for two shakes
+                    val resetRows = updatedRows.toMutableList()
+                    val resetRow = resetRows[currentRowIndex]
+                    resetRows[currentRowIndex] = resetRow.copy(isShaking = false)
 
-                val isWin = WordEvaluator.isCorrectWord(guess, target)
-                val isLastAttempt = currentRowIndex == currentConfig.maxGuesses - 1
+                    _uiState.value = currentState.copy(rows = resetRows)
+                }
+                return@isWordValid
+            }
 
-                if (isWin) {
-                    val attempts = currentRowIndex + 1
-                    val updatedStats = updateStatsForGameEnd(
-                        current = statsRepository.load(),
-                        outcome = GameOutcome.WON,
-                        attempts = attempts
+            // Proceed with evaluation if the word is valid
+            val evaluation = WordEvaluator.evaluate(guess, target)
+
+            when (evaluation) {
+                is EvaluationResult.Success -> {
+                    val nextRows = evaluatedRows(
+                        currentState = currentState,
+                        rowIndex = currentRowIndex,
+                        states = evaluation.states
                     )
-                    statsRepository.save(updatedStats)
-                    if (currentConfig.mode == GameMode.DAILY) {
-                        dailyPlayRepository.markPlayedTodayUtc()
+
+                    val nextKeyStates = reduceKeyboardKeyStates(
+                        previous = currentState.keyStates,
+                        guess = guess,
+                        states = evaluation.states
+                    )
+
+                    val isWin = WordEvaluator.isCorrectWord(guess, target)
+                    val isLastAttempt = currentRowIndex == currentConfig.maxGuesses - 1
+
+                    if (isWin) {
+                        val attempts = currentRowIndex + 1
+                        val updatedStats = updateStatsForGameEnd(
+                            current = statsRepository.load(),
+                            outcome = GameOutcome.WON,
+                            attempts = attempts
+                        )
+                        statsRepository.save(updatedStats)
+                        if (currentConfig.mode == GameMode.DAILY) {
+                            dailyPlayRepository.markPlayedTodayUtc()
+                        }
+
+                        _uiState.value = currentState.copy(
+                            rows = nextRows,
+                            keyStates = nextKeyStates,
+                            stats = updatedStats,
+                            gameOutcome = GameOutcome.WON,
+                            revealedTargetWord = target,
+                            isResultScreenVisible = true,
+                            statusText = roundText(currentRowIndex + 1, currentConfig.maxGuesses),
+                            errorMessage = null
+                        )
+                        return@isWordValid
                     }
+
+                    if (isLastAttempt) {
+                        val updatedStats = updateStatsForGameEnd(
+                            current = statsRepository.load(),
+                            outcome = GameOutcome.LOST,
+                            attempts = null
+                        )
+                        statsRepository.save(updatedStats)
+                        if (currentConfig.mode == GameMode.DAILY) {
+                            dailyPlayRepository.markPlayedTodayUtc()
+                        }
+
+                        _uiState.value = currentState.copy(
+                            rows = nextRows,
+                            keyStates = nextKeyStates,
+                            stats = updatedStats,
+                            gameOutcome = GameOutcome.LOST,
+                            revealedTargetWord = target,
+                            isResultScreenVisible = true,
+                            statusText = "Game Over",
+                            errorMessage = null
+                        )
+                        return@isWordValid
+                    }
+
+                    currentRowIndex++
+                    currentColIndex = 0
 
                     _uiState.value = currentState.copy(
                         rows = nextRows,
                         keyStates = nextKeyStates,
-                        stats = updatedStats,
-                        gameOutcome = GameOutcome.WON,
-                        revealedTargetWord = target,
-                        isResultScreenVisible = true,
-                        statusText = roundText(currentRowIndex + 1, currentConfig.maxGuesses),
+                        statusText = if (currentRowIndex < currentConfig.maxGuesses) {
+                            roundText(currentRowIndex + 1, currentConfig.maxGuesses)
+                        } else {
+                            "Game Over"
+                        },
                         errorMessage = null
                     )
-                    return
                 }
 
-                if (isLastAttempt) {
-                    val updatedStats = updateStatsForGameEnd(
-                        current = statsRepository.load(),
-                        outcome = GameOutcome.LOST,
-                        attempts = null
-                    )
-                    statsRepository.save(updatedStats)
-                    if (currentConfig.mode == GameMode.DAILY) {
-                        dailyPlayRepository.markPlayedTodayUtc()
-                    }
-
+                is EvaluationResult.InvalidLength -> {
                     _uiState.value = currentState.copy(
-                        rows = nextRows,
-                        keyStates = nextKeyStates,
-                        stats = updatedStats,
-                        gameOutcome = GameOutcome.LOST,
-                        revealedTargetWord = target,
-                        isResultScreenVisible = true,
-                        statusText = "Game Over",
+                        statusText = "You must type ${evaluation.requiredLength} letters before ENTER.",
                         errorMessage = null
                     )
-                    return
                 }
 
-                currentRowIndex++
-                currentColIndex = 0
-
-                _uiState.value = currentState.copy(
-                    rows = nextRows,
-                    keyStates = nextKeyStates,
-                    statusText = if (currentRowIndex < currentConfig.maxGuesses) {
-                        roundText(currentRowIndex + 1, currentConfig.maxGuesses)
-                    } else {
-                        "Game Over"
-                    },
-                    errorMessage = null
-                )
+                is EvaluationResult.InvalidTargetLength -> {
+                    _uiState.value = currentState.copy(
+                        statusText = "Selected word is invalid (length ${evaluation.providedLength}).",
+                        errorMessage = "Invalid target word"
+                    )
+                }
             }
-
-            is EvaluationResult.InvalidLength -> {
-                _uiState.value = currentState.copy(
-                    statusText = "You must type ${evaluation.requiredLength} letters before ENTER.",
-                    errorMessage = null
-                )
-            }
-
-            is EvaluationResult.InvalidTargetLength -> {
-                _uiState.value = currentState.copy(
-                    statusText = "Selected word is invalid (length ${evaluation.providedLength}).",
-                    errorMessage = "Invalid target word"
-                )
-            }
-        }
+        }, onFailure = { exception ->
+            _uiState.value = currentState.copy(
+                statusText = "Error validating word: ${exception.message}",
+                errorMessage = exception.message
+            )
+        })
     }
 
     private fun buildGuess(state: GameUiState, rowIndex: Int): String {
