@@ -13,54 +13,111 @@ class GameViewModel(
 ) : ViewModel() {
 
     private var targetWord: String? = null
-    private var hasRequestedDailyWord: Boolean = false
-
-    // Track the user's current typing position
+    private var currentConfig: GameConfig = GameConfig()
     private var currentRowIndex = 0
     private var currentColIndex = 0
+    private var requestToken = 0
 
-    // Initialize with a completely blank boarrd
     private val _uiState = MutableStateFlow(
         GameUiState(
-            rows = List(6) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
-            statusText = "Loading today's word…",
-            stats = statsRepository.load()
+            rows = List(MAX_GUESSES) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
+            statusText = "Choose a game mode",
+            stats = statsRepository.load(),
+            maxGuesses = MAX_GUESSES
         )
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
-    fun onGameStart() {
-        // Decouple daily-word loading from ViewModel creation. This avoids loading the word
-        // just because the ViewModel was instantiated (e.g. due to navigation/back stack reuse).
-        if (hasRequestedDailyWord) return
-        hasRequestedDailyWord = true
-        loadDailyTargetWord()
+    fun startGame(config: GameConfig) {
+        currentConfig = config
+        currentRowIndex = 0
+        currentColIndex = 0
+        targetWord = null
+        requestToken++
+        val currentRequest = requestToken
+
+        _uiState.value = GameUiState(
+            rows = List(config.maxGuesses) {
+                GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
+            },
+            statusText = loadingMessage(config.mode),
+            stats = statsRepository.load(),
+            maxGuesses = config.maxGuesses,
+            isTargetWordLoaded = false,
+            keyStates = emptyMap(),
+            isLoading = true,
+            errorMessage = null
+        )
+
+        when (config.mode) {
+            GameMode.DAILY -> {
+                wordProvider.getDailyWord(
+                    onSuccess = { word ->
+                        if (currentRequest != requestToken) return@getDailyWord
+                        targetWord = word.uppercase()
+                        _uiState.value = _uiState.value.copy(
+                            isTargetWordLoaded = true,
+                            isLoading = false,
+                            statusText = roundText(1, config.maxGuesses),
+                            errorMessage = null
+                        )
+                    },
+                    onFailure = { ex ->
+                        if (currentRequest != requestToken) return@getDailyWord
+                        targetWord = null
+                        _uiState.value = _uiState.value.copy(
+                            isTargetWordLoaded = false,
+                            isLoading = false,
+                            statusText = "Could not start daily game",
+                            errorMessage = ex.message ?: "Unknown error"
+                        )
+                    }
+                )
+            }
+
+            GameMode.CUSTOM -> {
+                wordProvider.getRandomWord(
+                    onSuccess = { word ->
+                        if (currentRequest != requestToken) return@getRandomWord
+                        targetWord = word.uppercase()
+                        _uiState.value = _uiState.value.copy(
+                            isTargetWordLoaded = true,
+                            isLoading = false,
+                            statusText = roundText(1, config.maxGuesses),
+                            errorMessage = null
+                        )
+                    },
+                    onFailure = { ex ->
+                        if (currentRequest != requestToken) return@getRandomWord
+                        targetWord = null
+                        _uiState.value = _uiState.value.copy(
+                            isTargetWordLoaded = false,
+                            isLoading = false,
+                            statusText = "Could not start custom game",
+                            errorMessage = ex.message ?: "Unknown error"
+                        )
+                    }
+                )
+            }
+        }
     }
 
-    // Logic to handle keyboard clicks
     fun onKeyPress(key: String) {
         val currentState = _uiState.value
 
-        // Disable input until we have the daily target word.
         if (!currentState.isTargetWordLoaded) return
-
-        // Stop accepting input if the game is over (all 6 rows filled)
-        if (currentRowIndex >= 6) return
+        if (currentRowIndex >= currentConfig.maxGuesses) return
 
         when (key) {
-            "ENTER" -> {
-                submitGuess()
-            }
-            "⌫" -> {
-                // Handle Backspace: Move back and clear the tile by setting it to the default empty TileUiState()
+            "ENTER" -> submitGuess()
+            BACKSPACE_KEY -> {
                 if (currentColIndex > 0) {
                     currentColIndex--
                     updateTile(currentState, currentRowIndex, currentColIndex, TileUiState())
                 }
             }
             else -> {
-                // Handle Letters: Add the letter if row isn't full, using your teammate's TYPING state
-                if (currentColIndex < WORD_LENGTH) {
+                if (currentColIndex < WORD_LENGTH && key.length == 1) {
                     val newTile = TileUiState(key.first(), TileVisualState.TYPING)
                     updateTile(currentState, currentRowIndex, currentColIndex, newTile)
                     currentColIndex++
@@ -69,40 +126,23 @@ class GameViewModel(
         }
     }
 
-    private fun loadDailyTargetWord() {
-        _uiState.value = _uiState.value.copy(
-            isTargetWordLoaded = false,
-            statusText = "Loading today's word…"
-        )
-
-        wordProvider.getDailyWord(
-            onSuccess = { word ->
-                targetWord = word
-                _uiState.value = _uiState.value.copy(
-                    isTargetWordLoaded = true,
-                    statusText = "Round 1 of 6"
-                )
-            },
-            onFailure = { ex ->
-                targetWord = null
-                _uiState.value = _uiState.value.copy(
-                    isTargetWordLoaded = false,
-                    statusText = "Couldn't load today's word: ${ex.message ?: "unknown error"}"
-                )
-            }
-        )
-    }
-
     private fun submitGuess() {
         val currentState = _uiState.value
         val target = targetWord
+
         if (target.isNullOrBlank()) {
-            _uiState.value = currentState.copy(statusText = "Today's word is missing. Please try again later.")
+            _uiState.value = currentState.copy(
+                statusText = "Word is missing. Please try again later.",
+                errorMessage = "Target word is missing"
+            )
             return
         }
 
         if (currentColIndex != WORD_LENGTH) {
-            _uiState.value = currentState.copy(statusText = "You must type $WORD_LENGTH letters before ENTER.")
+            _uiState.value = currentState.copy(
+                statusText = "You must type $WORD_LENGTH letters before ENTER.",
+                errorMessage = null
+            )
             return
         }
 
@@ -123,36 +163,40 @@ class GameViewModel(
                     states = evaluation.states
                 )
 
-                // Move to the next row, reset column
                 currentRowIndex++
                 currentColIndex = 0
 
                 _uiState.value = _uiState.value.copy(
                     keyStates = nextKeyStates,
-                    statusText = if (currentRowIndex < MAX_GUESSES) {
-                        "Round ${currentRowIndex + 1} of 6"
+                    statusText = if (currentRowIndex < currentConfig.maxGuesses) {
+                        roundText(currentRowIndex + 1, currentConfig.maxGuesses)
                     } else {
                         "Game Over"
-                    }
+                    },
+                    errorMessage = null
                 )
             }
 
             is EvaluationResult.InvalidLength -> {
                 _uiState.value = currentState.copy(
-                    statusText = "You must type ${evaluation.requiredLength} letters before ENTER."
+                    statusText = "You must type ${evaluation.requiredLength} letters before ENTER.",
+                    errorMessage = null
                 )
             }
 
             is EvaluationResult.InvalidTargetLength -> {
                 _uiState.value = currentState.copy(
-                    statusText = "Today's word is invalid (length ${evaluation.providedLength})."
+                    statusText = "Selected word is invalid (length ${evaluation.providedLength}).",
+                    errorMessage = "Invalid target word"
                 )
             }
         }
     }
 
     private fun buildGuess(state: GameUiState, rowIndex: Int): String {
-        return state.rows[rowIndex].tiles.joinToString(separator = "") { (it.letter ?: ' ').toString() }.trim()
+        return state.rows[rowIndex].tiles.joinToString(separator = "") {
+            (it.letter ?: ' ').toString()
+        }.trim()
     }
 
     private fun applyEvaluationToRow(
@@ -181,17 +225,25 @@ class GameViewModel(
         _uiState.value = _uiState.value.copy(isStatsDialogVisible = false)
     }
 
-    // Helper function to properly update the deeply nested Compose state
     private fun updateTile(currentState: GameUiState, r: Int, c: Int, newTile: TileUiState) {
         val newRows = currentState.rows.toMutableList()
         val currentRowState = newRows[r]
         val newTiles = currentRowState.tiles.toMutableList()
-
-        // Update the specific tile
         newTiles[c] = newTile
-
-        // Re-package it back up
         newRows[r] = currentRowState.copy(tiles = newTiles)
         _uiState.value = currentState.copy(rows = newRows)
     }
+
+    private fun loadingMessage(mode: GameMode): String {
+        return when (mode) {
+            GameMode.DAILY -> "Loading daily word..."
+            GameMode.CUSTOM -> "Loading random word..."
+        }
+    }
+
+    private fun roundText(round: Int, maxGuesses: Int): String {
+        return "Round $round of $maxGuesses"
+    }
 }
+
+private const val BACKSPACE_KEY = "\u00E2\u0152\u00AB"
