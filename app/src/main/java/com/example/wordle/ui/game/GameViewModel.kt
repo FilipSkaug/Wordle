@@ -246,4 +246,4 @@ class GameViewModel(
     }
 }
 
-private const val BACKSPACE_KEY = "\u00E2\u0152\u00AB"
+private const val BACKSPACE_KEY = "BACKSPACE"

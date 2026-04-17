@@ -111,7 +111,13 @@ fun WordleKeyboard(
                     text = key,
                     state = state,
                     modifier = Modifier.weight(weight),
-                    onClick = onKeyPress
+                    onClick = {
+                        if (key == "⌫") {
+                            onKeyPress("BACKSPACE") // Send a specific action for backspace
+                        } else {
+                            onKeyPress(key)
+                        }
+                    }
                 )
             }
         }
