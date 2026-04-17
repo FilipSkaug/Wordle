@@ -25,6 +25,8 @@ import com.example.wordle.ui.theme.WordleTitle
 
 @Composable
 fun MenuScreen(
+    isAuthenticated: Boolean,
+    onProfileClick: () -> Unit,
     onPlayDaily: () -> Unit,
     onLoginClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -77,11 +79,20 @@ fun MenuScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        MenuButton(
-            text = "Login / Sign up",
-            icon = Icons.Default.AccountCircle,
-            onClick = onLoginClick
-        )
+
+        if (isAuthenticated) {
+            MenuButton(
+                text = "Profile",
+                icon = Icons.Default.AccountCircle,
+                onClick = onProfileClick
+            )
+        } else {
+            MenuButton(
+                text = "Login / Sign up",
+                icon = Icons.Default.AccountCircle,
+                onClick = onLoginClick
+            )
+        }
 
         Spacer(modifier = Modifier.height(48.dp))
 
@@ -145,9 +156,12 @@ fun MenuButton(
 @Composable
 fun MenuScreenPreview() {
     MenuScreen(
+        isAuthenticated = false,
+        onProfileClick = {},
         onPlayDaily = {},
         onLoginClick = {},
         onSettingsClick = {},
         onStatsClick = {}
     )
 }
+
