@@ -33,6 +33,7 @@ data class GameUiState(
     val maxGuesses: Int = MAX_GUESSES,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val topBannerMessage: String? = null,
     /**
      * Controls whether the end-of-game screen (You won/You lost + stats) should be shown.
      * The game can be finished (gameOutcome != null) while this is false, e.g. when returning

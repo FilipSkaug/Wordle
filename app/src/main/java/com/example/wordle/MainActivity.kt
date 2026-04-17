@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wordle.data.WordProvider
+import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.auth.AuthScreen
@@ -61,11 +62,14 @@ class MainActivity : ComponentActivity() {
                 var selectedCustomGuesses by rememberSaveable { mutableStateOf(MAX_CUSTOM_GUESSES_DEFAULT) }
                 var currentGameMode by rememberSaveable { mutableStateOf(GameMode.DAILY.name) }
                 var currentMaxGuesses by rememberSaveable { mutableStateOf(DEFAULT_DAILY_GUESSES) }
+                var topBannerMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
                 val currentGameConfig = GameConfig(
                     mode = GameMode.valueOf(currentGameMode),
                     maxGuesses = currentMaxGuesses
                 )
+
+                val dailyPlayRepository = remember { DailyPlayRepository(applicationContext) }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -77,8 +81,16 @@ class MainActivity : ComponentActivity() {
                             onProfileClick = { currentScreen = Screen.User },
                             onPlayDaily = {
                                 isStatsDialogVisible = false
-                                currentGameMode = GameMode.DAILY.name
-                                currentMaxGuesses = DEFAULT_DAILY_GUESSES
+                                if (dailyPlayRepository.hasPlayedTodayUtc()) {
+                                    topBannerMessage =
+                                        "You've already played today's Daily Wordle. Starting a custom game with a random word."
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = DEFAULT_CUSTOM_GUESSES
+                                } else {
+                                    topBannerMessage = null
+                                    currentGameMode = GameMode.DAILY.name
+                                    currentMaxGuesses = DEFAULT_DAILY_GUESSES
+                                }
                                 currentScreen = Screen.Game
                             },
                             onPlayCustom = { currentScreen = Screen.CustomSetup },
@@ -93,6 +105,7 @@ class MainActivity : ComponentActivity() {
                                 selectedGuesses = selectedCustomGuesses,
                                 onGuessesChanged = { selectedCustomGuesses = it },
                                 onStartGame = {
+                                    topBannerMessage = null
                                     currentGameMode = GameMode.CUSTOM.name
                                     currentMaxGuesses = selectedCustomGuesses
                                     currentScreen = Screen.Game
@@ -107,13 +120,14 @@ class MainActivity : ComponentActivity() {
                             val gameViewModel = viewModel<GameViewModel>(
                                 factory = GameViewModelFactory(
                                     statsRepository = statsRepository,
-                                    wordProvider = wordProvider
+                                    wordProvider = wordProvider,
+                                    dailyPlayRepository = dailyPlayRepository
                                 )
                             )
                             val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
-                            LaunchedEffect(currentGameConfig.mode, currentGameConfig.maxGuesses) {
-                                gameViewModel.startGame(currentGameConfig)
+                            LaunchedEffect(currentGameConfig.mode, currentGameConfig.maxGuesses, topBannerMessage) {
+                                gameViewModel.startGame(currentGameConfig, topBannerMessage = topBannerMessage)
                             }
 
                             BackHandler {
@@ -126,6 +140,11 @@ class MainActivity : ComponentActivity() {
                                 onKeyPress = gameViewModel::onKeyPress,
                                 onOpenStats = gameViewModel::onOpenStats,
                                 onCloseStats = gameViewModel::onCloseStats,
+                                onStartCustomDefault = {
+                                    topBannerMessage = null
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = DEFAULT_CUSTOM_GUESSES
+                                },
                                 onLogout = {
                                     authViewModel.logout()
                                     currentScreen = Screen.Menu
@@ -194,6 +213,7 @@ private fun AuthenticatedApp(
     onKeyPress: (String) -> Unit,
     onOpenStats: () -> Unit,
     onCloseStats: () -> Unit,
+    onStartCustomDefault: () -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -226,6 +246,7 @@ private fun AuthenticatedApp(
             GameScreen(
                 uiState = gameUiState,
                 onCloseStats = onCloseStats,
+                onStartCustomDefault = onStartCustomDefault,
                 modifier = Modifier.weight(1f)
             )
 
@@ -241,3 +262,4 @@ private fun AuthenticatedApp(
 
 private const val DEFAULT_DAILY_GUESSES = 6
 private const val MAX_CUSTOM_GUESSES_DEFAULT = 6
+private const val DEFAULT_CUSTOM_GUESSES = 6

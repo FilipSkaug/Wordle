@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import com.example.wordle.ui.stats.StatsContent
 fun GameScreen(
     uiState: GameUiState,
     onCloseStats: () -> Unit,
+    onStartCustomDefault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -59,6 +61,17 @@ fun GameScreen(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            uiState.topBannerMessage?.let { banner ->
+                Text(
+                    text = banner,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WordleTextSecondary,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             if (uiState.gameOutcome == null) {
                 Text(
@@ -93,6 +106,7 @@ fun GameScreen(
                         outcome = uiState.gameOutcome,
                         targetWord = uiState.revealedTargetWord,
                         stats = uiState.stats,
+                        onStartCustomDefault = onStartCustomDefault,
                         modifier = Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
@@ -104,13 +118,6 @@ fun GameScreen(
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (uiState.gameOutcome != null) {
-                            AlreadyPlayedBanner(
-                                outcome = uiState.gameOutcome,
-                                targetWord = uiState.revealedTargetWord
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
                         GuessGrid(rows = uiState.rows)
                     }
                 }
@@ -131,6 +138,7 @@ private fun GameResultContent(
     outcome: GameOutcome?,
     targetWord: String?,
     stats: com.example.wordle.data.stats.UserStats,
+    onStartCustomDefault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -164,46 +172,11 @@ private fun GameResultContent(
         Spacer(modifier = Modifier.height(4.dp))
 
         StatsContent(stats = stats)
-    }
-}
 
-@Composable
-private fun AlreadyPlayedBanner(
-    outcome: GameOutcome?,
-    targetWord: String?
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = "You've already played today's Wordle.",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            color = WordleTextSecondary
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-        val outcomeLine = when (outcome) {
-            GameOutcome.WON -> "Result: You won"
-            GameOutcome.LOST -> "Result: You lost"
-            null -> null
-        }
-        if (outcomeLine != null) {
-            Text(
-                text = outcomeLine,
-                style = MaterialTheme.typography.bodyMedium,
-                color = WordleTextSecondary
-            )
-        }
-
-        if (!targetWord.isNullOrBlank()) {
-            Text(
-                text = "Answer: ${targetWord.uppercase()}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = WordleTextSecondary
-            )
+        Button(onClick = onStartCustomDefault) {
+            Text("Play Custom Wordle")
         }
     }
 }
@@ -284,6 +257,7 @@ private fun GameScreenPreview() {
                 statusText = "Round 1 of 6"
             ),
             onCloseStats = {},
+            onStartCustomDefault = {},
             modifier = Modifier
         )
     }

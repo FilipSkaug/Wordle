@@ -2,6 +2,7 @@ package com.example.wordle.ui.game
 
 import androidx.lifecycle.ViewModel
 import com.example.wordle.data.WordProvider
+import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.StatsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,7 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class GameViewModel(
     private val statsRepository: StatsRepository,
-    private val wordProvider: WordProvider
+    private val wordProvider: WordProvider,
+    private val dailyPlayRepository: DailyPlayRepository
 ) : ViewModel() {
 
     private var targetWord: String? = null
@@ -28,7 +30,7 @@ class GameViewModel(
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
-    fun startGame(config: GameConfig) {
+    fun startGame(config: GameConfig, topBannerMessage: String? = null) {
         currentConfig = config
         currentRowIndex = 0
         currentColIndex = 0
@@ -49,7 +51,8 @@ class GameViewModel(
             revealedTargetWord = null,
             isResultScreenVisible = false,
             isLoading = true,
-            errorMessage = null
+            errorMessage = null,
+            topBannerMessage = topBannerMessage
         )
 
         when (config.mode) {
@@ -109,6 +112,9 @@ class GameViewModel(
         // When returning later the same day, show the board instead of the result screen.
         if (_uiState.value.isResultScreenVisible) {
             _uiState.value = _uiState.value.copy(isResultScreenVisible = false)
+        }
+        if (_uiState.value.topBannerMessage != null) {
+            _uiState.value = _uiState.value.copy(topBannerMessage = null)
         }
     }
 
@@ -187,6 +193,9 @@ class GameViewModel(
                         attempts = attempts
                     )
                     statsRepository.save(updatedStats)
+                    if (currentConfig.mode == GameMode.DAILY) {
+                        dailyPlayRepository.markPlayedTodayUtc()
+                    }
 
                     _uiState.value = currentState.copy(
                         rows = nextRows,
@@ -208,6 +217,9 @@ class GameViewModel(
                         attempts = null
                     )
                     statsRepository.save(updatedStats)
+                    if (currentConfig.mode == GameMode.DAILY) {
+                        dailyPlayRepository.markPlayedTodayUtc()
+                    }
 
                     _uiState.value = currentState.copy(
                         rows = nextRows,
