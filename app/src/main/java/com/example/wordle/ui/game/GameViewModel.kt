@@ -2,6 +2,7 @@ package com.example.wordle.ui.game
 
 import androidx.lifecycle.ViewModel
 import com.example.wordle.data.WordProvider
+import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.StatsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,7 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class GameViewModel(
     private val statsRepository: StatsRepository,
-    private val wordProvider: WordProvider
+    private val wordProvider: WordProvider,
+    private val dailyPlayRepository: DailyPlayRepository
 ) : ViewModel() {
 
     private var targetWord: String? = null
@@ -28,7 +30,7 @@ class GameViewModel(
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
-    fun startGame(config: GameConfig) {
+    fun startGame(config: GameConfig, topBannerMessage: String? = null) {
         currentConfig = config
         currentRowIndex = 0
         currentColIndex = 0
@@ -45,8 +47,12 @@ class GameViewModel(
             maxGuesses = config.maxGuesses,
             isTargetWordLoaded = false,
             keyStates = emptyMap(),
+            gameOutcome = null,
+            revealedTargetWord = null,
+            isResultScreenVisible = false,
             isLoading = true,
-            errorMessage = null
+            errorMessage = null,
+            topBannerMessage = topBannerMessage
         )
 
         when (config.mode) {
@@ -102,10 +108,21 @@ class GameViewModel(
         }
     }
 
+    fun onLeaveGameScreen() {
+        // When returning later the same day, show the board instead of the result screen.
+        if (_uiState.value.isResultScreenVisible) {
+            _uiState.value = _uiState.value.copy(isResultScreenVisible = false)
+        }
+        if (_uiState.value.topBannerMessage != null) {
+            _uiState.value = _uiState.value.copy(topBannerMessage = null)
+        }
+    }
+
     fun onKeyPress(key: String) {
         val currentState = _uiState.value
 
         if (!currentState.isTargetWordLoaded) return
+        if (currentState.gameOutcome != null) return
         if (currentRowIndex >= currentConfig.maxGuesses) return
 
         when (key) {
@@ -138,6 +155,8 @@ class GameViewModel(
             return
         }
 
+        if (currentState.gameOutcome != null) return
+
         if (currentColIndex != WORD_LENGTH) {
             _uiState.value = currentState.copy(
                 statusText = "You must type $WORD_LENGTH letters before ENTER.",
@@ -151,7 +170,7 @@ class GameViewModel(
 
         when (evaluation) {
             is EvaluationResult.Success -> {
-                applyEvaluationToRow(
+                val nextRows = evaluatedRows(
                     currentState = currentState,
                     rowIndex = currentRowIndex,
                     states = evaluation.states
@@ -163,10 +182,63 @@ class GameViewModel(
                     states = evaluation.states
                 )
 
+                val isWin = WordEvaluator.isCorrectWord(guess, target)
+                val isLastAttempt = currentRowIndex == currentConfig.maxGuesses - 1
+
+                if (isWin) {
+                    val attempts = currentRowIndex + 1
+                    val updatedStats = updateStatsForGameEnd(
+                        current = statsRepository.load(),
+                        outcome = GameOutcome.WON,
+                        attempts = attempts
+                    )
+                    statsRepository.save(updatedStats)
+                    if (currentConfig.mode == GameMode.DAILY) {
+                        dailyPlayRepository.markPlayedTodayUtc()
+                    }
+
+                    _uiState.value = currentState.copy(
+                        rows = nextRows,
+                        keyStates = nextKeyStates,
+                        stats = updatedStats,
+                        gameOutcome = GameOutcome.WON,
+                        revealedTargetWord = target,
+                        isResultScreenVisible = true,
+                        statusText = roundText(currentRowIndex + 1, currentConfig.maxGuesses),
+                        errorMessage = null
+                    )
+                    return
+                }
+
+                if (isLastAttempt) {
+                    val updatedStats = updateStatsForGameEnd(
+                        current = statsRepository.load(),
+                        outcome = GameOutcome.LOST,
+                        attempts = null
+                    )
+                    statsRepository.save(updatedStats)
+                    if (currentConfig.mode == GameMode.DAILY) {
+                        dailyPlayRepository.markPlayedTodayUtc()
+                    }
+
+                    _uiState.value = currentState.copy(
+                        rows = nextRows,
+                        keyStates = nextKeyStates,
+                        stats = updatedStats,
+                        gameOutcome = GameOutcome.LOST,
+                        revealedTargetWord = target,
+                        isResultScreenVisible = true,
+                        statusText = "Game Over",
+                        errorMessage = null
+                    )
+                    return
+                }
+
                 currentRowIndex++
                 currentColIndex = 0
 
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = currentState.copy(
+                    rows = nextRows,
                     keyStates = nextKeyStates,
                     statusText = if (currentRowIndex < currentConfig.maxGuesses) {
                         roundText(currentRowIndex + 1, currentConfig.maxGuesses)
@@ -199,18 +271,18 @@ class GameViewModel(
         }.trim()
     }
 
-    private fun applyEvaluationToRow(
+    private fun evaluatedRows(
         currentState: GameUiState,
         rowIndex: Int,
         states: List<TileVisualState>
-    ) {
+    ): List<GuessRowUiState> {
         val newRows = currentState.rows.toMutableList()
         val row = newRows[rowIndex]
         val newTiles = row.tiles.mapIndexed { idx, tile ->
             tile.copy(state = states.getOrElse(idx) { TileVisualState.ABSENT })
         }
         newRows[rowIndex] = row.copy(tiles = newTiles)
-        _uiState.value = currentState.copy(rows = newRows)
+        return newRows
     }
 
     fun onOpenStats() {
@@ -234,6 +306,41 @@ class GameViewModel(
         _uiState.value = currentState.copy(rows = newRows)
     }
 
+    private fun updateStatsForGameEnd(
+        current: com.example.wordle.data.stats.UserStats,
+        outcome: GameOutcome,
+        attempts: Int?
+    ): com.example.wordle.data.stats.UserStats {
+        val played = current.gamesPlayed + 1
+
+        return when (outcome) {
+            GameOutcome.WON -> {
+                val won = current.gamesWon + 1
+                val nextDist = current.guessDistribution.toMutableList()
+                val idx = ((attempts ?: 1) - 1).coerceIn(0, nextDist.lastIndex)
+                nextDist[idx] = nextDist[idx] + 1
+
+                val nextStreak = current.currentStreak + 1
+                val nextMaxStreak = maxOf(current.maxStreak, nextStreak)
+
+                current.copy(
+                    gamesPlayed = played,
+                    gamesWon = won,
+                    guessDistribution = nextDist,
+                    currentStreak = nextStreak,
+                    maxStreak = nextMaxStreak
+                )
+            }
+
+            GameOutcome.LOST -> {
+                current.copy(
+                    gamesPlayed = played,
+                    currentStreak = 0
+                )
+            }
+        }
+    }
+
     private fun loadingMessage(mode: GameMode): String {
         return when (mode) {
             GameMode.DAILY -> "Loading daily word..."
@@ -246,4 +353,4 @@ class GameViewModel(
     }
 }
 
-private const val BACKSPACE_KEY = "\u00E2\u0152\u00AB"
+private const val BACKSPACE_KEY = "⌫"
