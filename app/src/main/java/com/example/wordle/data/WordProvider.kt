@@ -13,7 +13,7 @@ class WordProvider {
      * Returns the daily word based on the current date.
      * The word is deterministically selected from the Firestore `word_bank`.
      */
-    fun getDailyWord(language: String = "English", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
+    fun getDailyWord(language: String = "English2", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("Words").document(language).get()
             .addOnSuccessListener { document ->
                 val wordBank = (document["word_bank"] as? List<*>)?.filterIsInstance<String>()
@@ -33,7 +33,7 @@ class WordProvider {
      * Fetches a random word from the Firestore collection `Words`, document for the specified language.
      * Defaults to "English" if no language is provided.
      */
-    fun getRandomWord(language: String = "English", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
+    fun getRandomWord(language: String = "English2", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
         firestore.collection("Words").document(language).get()
             .addOnSuccessListener { document ->
                 val wordBank = (document["word_bank"] as? List<*>)?.filterIsInstance<String>()
@@ -53,7 +53,7 @@ class WordProvider {
      * Checks if the input word exists in the Firestore `valid_words` array for the specified language.
      * Defaults to "English" if no language is provided.
      */
-    fun isWordValid(word: String, language: String = "English", onSuccess: (Boolean) -> Unit, onFailure: (Exception) -> Unit) {
+    fun isWordValid(word: String, language: String = "English2", onSuccess: (Boolean) -> Unit, onFailure: (Exception) -> Unit) {
         val firstLetter = word.firstOrNull()?.lowercaseChar()
         if (firstLetter == null || !firstLetter.isLetter()) {
             onFailure(Exception("Invalid word: $word"))
@@ -65,7 +65,7 @@ class WordProvider {
                 val validWordsMap = document["valid_words"] as? Map<*, *>
                 val validWords = validWordsMap?.get(firstLetter.toString()) as? List<*>
                 if (validWords != null) {
-                    onSuccess(validWords.filterIsInstance<String>().contains(word))
+                    onSuccess(validWords.filterIsInstance<String>().any { it.equals(word, ignoreCase = true) })
                 } else {
                     onFailure(Exception("Valid words list is empty or missing for letter: $firstLetter in language: $language."))
                 }

@@ -43,7 +43,8 @@ data class GameUiState(
 )
 
 data class GuessRowUiState(
-    val tiles: List<TileUiState>
+    val tiles: List<TileUiState>,
+    val isShaking: Boolean = false // Added to indicate if the row should shake
 )
 
 data class TileUiState(
