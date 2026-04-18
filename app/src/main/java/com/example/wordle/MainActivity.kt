@@ -19,8 +19,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -58,14 +60,17 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
                 var isStatsDialogVisible by rememberSaveable { mutableStateOf(false) }
-                var selectedCustomGuesses by rememberSaveable { mutableStateOf(MAX_CUSTOM_GUESSES_DEFAULT) }
-                var currentGameMode by rememberSaveable { mutableStateOf(GameMode.DAILY.name) }
-                var currentMaxGuesses by rememberSaveable { mutableStateOf(DEFAULT_DAILY_GUESSES) }
+                var selectedCustomGuesses by rememberSaveable { mutableIntStateOf(MAX_CUSTOM_GUESSES_DEFAULT) }
 
-                val currentGameConfig = GameConfig(
-                    mode = GameMode.valueOf(currentGameMode),
-                    maxGuesses = currentMaxGuesses
+                val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                val wordProvider = remember { WordProvider() }
+                val gameViewModel = viewModel<GameViewModel>(
+                    factory = GameViewModelFactory(
+                        statsRepository = statsRepository,
+                        wordProvider = wordProvider
+                    )
                 )
+                val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -76,8 +81,12 @@ class MainActivity : ComponentActivity() {
                             isAuthenticated = authUiState.isAuthenticated,
                             onProfileClick = { currentScreen = Screen.User },
                             onPlayDaily = {
-                                currentGameMode = GameMode.DAILY.name
-                                currentMaxGuesses = DEFAULT_DAILY_GUESSES
+                                gameViewModel.startGame(
+                                    GameConfig(
+                                        mode = GameMode.DAILY,
+                                        maxGuesses = DEFAULT_DAILY_GUESSES
+                                    )
+                                )
                                 currentScreen = Screen.Game
                             },
                             onPlayCustom = { currentScreen = Screen.CustomSetup },
@@ -86,45 +95,38 @@ class MainActivity : ComponentActivity() {
                             onStatsClick = { isStatsDialogVisible = true }
                         )
 
-                        Screen.CustomSetup -> {
-                            BackHandler { currentScreen = Screen.Menu }
-                            CustomGameSetupScreen(
-                                selectedGuesses = selectedCustomGuesses,
-                                onGuessesChanged = { selectedCustomGuesses = it },
-                                onStartGame = {
-                                    currentGameMode = GameMode.CUSTOM.name
-                                    currentMaxGuesses = selectedCustomGuesses
-                                    currentScreen = Screen.Game
-                                },
-                                onBack = { currentScreen = Screen.Menu }
-                            )
-                        }
-
                         Screen.Game -> {
-                            val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
-                            val wordProvider = remember { WordProvider() }
-                            val gameViewModel = viewModel<GameViewModel>(
-                                factory = GameViewModelFactory(
-                                    statsRepository = statsRepository,
-                                    wordProvider = wordProvider
-                                )
-                            )
-                            val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
-
-                            LaunchedEffect(currentGameConfig.mode, currentGameConfig.maxGuesses) {
-                                gameViewModel.startGame(currentGameConfig)
-                            }
-
                             BackHandler { currentScreen = Screen.Menu }
 
-                            AuthenticatedApp(
-                                gameUiState = gameUiState,
+                            GameScreen(
+                                uiState = gameUiState,
                                 onKeyPress = gameViewModel::onKeyPress,
+                                onBack = { currentScreen = Screen.Menu },
                                 onOpenStats = gameViewModel::onOpenStats,
                                 onCloseStats = gameViewModel::onCloseStats,
                                 onLogout = {
                                     authViewModel.logout()
                                     currentScreen = Screen.Menu
+                                }
+                            )
+                        }
+
+                        Screen.CustomSetup -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            CustomGameSetupScreen(
+                                selectedGuesses = selectedCustomGuesses,
+                                onGuessesChanged = { selectedCustomGuesses = it },
+                                onStartGame = { word, validate, hard ->
+                                    gameViewModel.startGame(
+                                        GameConfig(
+                                            mode = GameMode.CUSTOM,
+                                            maxGuesses = selectedCustomGuesses,
+                                            targetWord = word,
+                                            validateWords = validate,
+                                            hardMode = hard
+                                        )
+                                    )
+                                    currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu }
                             )
@@ -176,55 +178,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AuthenticatedApp(
-    gameUiState: com.example.wordle.ui.game.GameUiState,
-    onKeyPress: (String) -> Unit,
-    onOpenStats: () -> Unit,
-    onCloseStats: () -> Unit,
-    onLogout: () -> Unit,
-    onBack: () -> Unit
-) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TextButton(onClick = onBack) {
-                    Text("Back")
-                }
-                Row {
-                    TextButton(onClick = onOpenStats) {
-                        Text("Statistics")
-                    }
-                    TextButton(onClick = onLogout) {
-                        Text("Log out")
-                    }
-                }
-            }
-
-            GameScreen(
-                uiState = gameUiState,
-                onCloseStats = onCloseStats,
-                modifier = Modifier.weight(1f)
-            )
-
-            WordleKeyboard(
-                keyStates = gameUiState.keyStates,
-                onKeyPress = onKeyPress
-            )
         }
     }
 }

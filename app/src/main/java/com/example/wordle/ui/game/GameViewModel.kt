@@ -20,10 +20,8 @@ class GameViewModel(
 
     private val _uiState = MutableStateFlow(
         GameUiState(
-            rows = List(MAX_GUESSES) { GuessRowUiState(List(WORD_LENGTH) { TileUiState() }) },
             statusText = "Choose a game mode",
-            stats = statsRepository.load(),
-            maxGuesses = MAX_GUESSES
+            stats = statsRepository.load()
         )
     )
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -36,13 +34,16 @@ class GameViewModel(
         requestToken++
         val currentRequest = requestToken
 
+        val initialWordLength = config.targetWord?.length ?: DEFAULT_WORD_LENGTH
+
         _uiState.value = GameUiState(
             rows = List(config.maxGuesses) {
-                GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
+                GuessRowUiState(List(initialWordLength) { TileUiState() })
             },
             statusText = loadingMessage(config.mode),
             stats = statsRepository.load(),
             maxGuesses = config.maxGuesses,
+            wordLength = initialWordLength,
             isTargetWordLoaded = false,
             keyStates = emptyMap(),
             isLoading = true,
@@ -55,9 +56,14 @@ class GameViewModel(
                     onSuccess = { word ->
                         if (currentRequest != requestToken) return@getDailyWord
                         targetWord = word.uppercase()
+                        val length = targetWord?.length ?: DEFAULT_WORD_LENGTH
                         _uiState.value = _uiState.value.copy(
                             isTargetWordLoaded = true,
                             isLoading = false,
+                            wordLength = length,
+                            rows = List(config.maxGuesses) {
+                                GuessRowUiState(List(length) { TileUiState() })
+                            },
                             statusText = roundText(1, config.maxGuesses),
                             errorMessage = null
                         )
@@ -75,14 +81,19 @@ class GameViewModel(
                 )
             }
 
-            GameMode.CUSTOM -> {
+            GameMode.RANDOM -> {
                 wordProvider.getRandomWord(
                     onSuccess = { word ->
                         if (currentRequest != requestToken) return@getRandomWord
                         targetWord = word.uppercase()
+                        val length = targetWord?.length ?: DEFAULT_WORD_LENGTH
                         _uiState.value = _uiState.value.copy(
                             isTargetWordLoaded = true,
                             isLoading = false,
+                            wordLength = length,
+                            rows = List(config.maxGuesses) {
+                                GuessRowUiState(List(length) { TileUiState() })
+                            },
                             statusText = roundText(1, config.maxGuesses),
                             errorMessage = null
                         )
@@ -93,11 +104,36 @@ class GameViewModel(
                         _uiState.value = _uiState.value.copy(
                             isTargetWordLoaded = false,
                             isLoading = false,
-                            statusText = "Could not start custom game",
+                            statusText = "Could not start random game",
                             errorMessage = ex.message ?: "Unknown error"
                         )
                     }
                 )
+            }
+
+            GameMode.CUSTOM -> {
+                val word = config.targetWord?.uppercase()
+                if (word.isNullOrBlank()) {
+                    _uiState.value = _uiState.value.copy(
+                        isTargetWordLoaded = false,
+                        isLoading = false,
+                        statusText = "Custom word is missing",
+                        errorMessage = "No target word provided"
+                    )
+                } else {
+                    targetWord = word
+                    val length = word.length
+                    _uiState.value = _uiState.value.copy(
+                        isTargetWordLoaded = true,
+                        isLoading = false,
+                        wordLength = length,
+                        rows = List(config.maxGuesses) {
+                            GuessRowUiState(List(length) { TileUiState() })
+                        },
+                        statusText = roundText(1, config.maxGuesses),
+                        errorMessage = null
+                    )
+                }
             }
         }
     }
@@ -117,7 +153,7 @@ class GameViewModel(
                 }
             }
             else -> {
-                if (currentColIndex < WORD_LENGTH && key.length == 1) {
+                if (currentColIndex < currentState.wordLength && key.length == 1) {
                     val newTile = TileUiState(key.first(), TileVisualState.TYPING)
                     updateTile(currentState, currentRowIndex, currentColIndex, newTile)
                     currentColIndex++
@@ -138,18 +174,64 @@ class GameViewModel(
             return
         }
 
-        if (currentColIndex != WORD_LENGTH) {
+        if (currentColIndex != currentState.wordLength) {
             _uiState.value = currentState.copy(
-                statusText = "You must type $WORD_LENGTH letters before ENTER.",
+                statusText = "You must type ${currentState.wordLength} letters before ENTER.",
                 errorMessage = null
             )
             return
         }
 
         val guess = buildGuess(currentState, currentRowIndex)
-        val evaluation = WordEvaluator.evaluate(guess, target)
 
-        when (evaluation) {
+        // Check hard mode
+        if (currentConfig.hardMode && currentRowIndex > 0) {
+            val lastRow = currentState.rows[currentRowIndex - 1]
+            
+            // Check green letters (CORRECT)
+            lastRow.tiles.forEachIndexed { index, tile ->
+                if (tile.state == TileVisualState.CORRECT) {
+                    if (guess[index] != tile.letter) {
+                        _uiState.value = currentState.copy(
+
+                            statusText = "${index + 1}th letter must be ${tile.letter}",
+                            errorMessage = null
+                        )
+                        return
+                    }
+                }
+            }
+            
+            // Check yellow letters (PRESENT)
+            val presentLetters = lastRow.tiles.filter { it.state == TileVisualState.PRESENT || it.state == TileVisualState.CORRECT }
+                .mapNotNull { it.letter }
+                .groupingBy { it }.eachCount()
+            
+            val guessLetters = guess.groupingBy { it }.eachCount()
+            
+            for ((char, count) in presentLetters) {
+                if ((guessLetters[char] ?: 0) < count) {
+                    _uiState.value = currentState.copy(
+                        statusText = "Guess must contain $char",
+                        errorMessage = null
+                    )
+                    return
+                }
+            }
+        }
+
+        // Check if word validation is required
+        if (currentConfig.validateWords && currentState.wordLength == 5) {
+            if (!wordProvider.isValidWord(guess)) {
+                _uiState.value = currentState.copy(
+                    statusText = "Not in word list",
+                    errorMessage = null
+                )
+                return
+            }
+        }
+
+        when (val evaluation = WordEvaluator.evaluate(guess, target)) {
             is EvaluationResult.Success -> {
                 applyEvaluationToRow(
                     currentState = currentState,
@@ -237,7 +319,8 @@ class GameViewModel(
     private fun loadingMessage(mode: GameMode): String {
         return when (mode) {
             GameMode.DAILY -> "Loading daily word..."
-            GameMode.CUSTOM -> "Loading random word..."
+            GameMode.RANDOM -> "Loading random word..."
+            GameMode.CUSTOM -> "Preparing custom game..."
         }
     }
 
@@ -246,4 +329,4 @@ class GameViewModel(
     }
 }
 
-private const val BACKSPACE_KEY = "\u00E2\u0152\u00AB"
+private const val BACKSPACE_KEY = "⌫"

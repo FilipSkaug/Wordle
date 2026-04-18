@@ -15,9 +15,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,69 +36,98 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordleTextSecondary
 import com.example.wordle.ui.theme.WordleTheme
 import com.example.wordle.ui.theme.WordleTitle
 import com.example.wordle.ui.stats.StatsDialog
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     uiState: GameUiState,
+    onKeyPress: (String) -> Unit,
+    onBack: () -> Unit,
+    onOpenStats: () -> Unit,
     onCloseStats: () -> Unit,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "WORDLE",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 4.sp
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Show How to Play menu */ }) {
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "How to Play")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = WordleBackground,
+                    titleContentColor = WordleTitle,
+                    navigationIconContentColor = WordleTitle,
+                    actionIconContentColor = WordleTitle
+                )
+            )
+        },
         containerColor = WordleBackground
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "WORDLE",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp,
-                color = WordleTitle
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = uiState.statusText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = WordleTextSecondary,
-                textAlign = TextAlign.Center
-            )
-
-            uiState.errorMessage?.let { error ->
-                Spacer(modifier = Modifier.height(8.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = uiState.statusText,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = WordleTextSecondary,
                     textAlign = TextAlign.Center
                 )
+
+                uiState.errorMessage?.let { error ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WordleTextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    GuessGrid(
+                        rows = uiState.rows,
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                GuessGrid(
-                    rows = uiState.rows,
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                )
-            }
+            WordleKeyboard(
+                keyStates = uiState.keyStates,
+                onKeyPress = onKeyPress
+            )
         }
     }
 
@@ -115,7 +154,12 @@ private fun GuessGrid(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 row.tiles.forEach { tile ->
-                    LetterTile(tile = tile)
+                    val tileSize = when {
+                        row.tiles.size <= 5 -> 56.dp
+                        row.tiles.size <= 8 -> 44.dp
+                        else -> 32.dp
+                    }
+                    LetterTile(tile = tile, size = tileSize)
                 }
             }
         }
@@ -125,11 +169,12 @@ private fun GuessGrid(
 @Composable
 private fun LetterTile(
     tile: TileUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 56.dp
 ) {
     Box(
         modifier = modifier
-            .size(56.dp)
+            .size(size)
             .background(tile.state.getBackgroundColor(), RoundedCornerShape(12.dp))
             .border(2.dp, tile.state.getBorderColor(), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
@@ -137,7 +182,7 @@ private fun LetterTile(
         Text(
             text = tile.letter?.toString() ?: "",
             color = tile.state.getTextColor(),
-            style = MaterialTheme.typography.titleLarge,
+            style = if (size < 40.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
     }
@@ -168,14 +213,18 @@ private fun GameScreenPreview() {
                             TileUiState()
                         )
                     ),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() })
                 ),
                 statusText = "Round 1 of 6"
             ),
+            onKeyPress = {},
+            onBack = {},
+            onOpenStats = {},
             onCloseStats = {},
+            onLogout = {},
             modifier = Modifier
         )
     }
