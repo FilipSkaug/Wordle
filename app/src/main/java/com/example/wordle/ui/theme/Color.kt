@@ -22,6 +22,11 @@ val TileEmptyBackground = Color(0xFFFFFFFF)
 val TileEmptyBorder = Color(0xFFD6D3D1)
 val TileTypingBorder = Color(0xFF78716C)
 
+// Standard Wordle Colors
 val TileCorrect = Color(0xFF6AAA01)
 val TilePresent = Color(0xFFC9B200)
 val TileAbsent = Color(0xFF787C7E)
+
+// High Contrast Wordle Colors (Colorblind friendly)
+val TileCorrectHighContrast = Color(0xFFF5793A) // Orange
+val TilePresentHighContrast = Color(0xFF85C0F9) // Blue

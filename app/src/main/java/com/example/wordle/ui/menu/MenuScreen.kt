@@ -12,16 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.wordle.BuildConfig
-import com.example.wordle.ui.theme.WordleBackground
-import com.example.wordle.ui.theme.WordlePrimaryAction
-import com.example.wordle.ui.theme.WordleSurface
-import com.example.wordle.ui.theme.WordleTitle
+import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
 fun MenuScreen(
@@ -37,7 +35,7 @@ fun MenuScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(WordleBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -46,7 +44,7 @@ fun MenuScreen(
             text = "WORDLE",
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.Black,
-            color = WordleTitle,
+            color = MaterialTheme.colorScheme.onBackground,
             letterSpacing = 4.sp
         )
 
@@ -56,8 +54,8 @@ fun MenuScreen(
             text = "Daily Wordle",
             icon = Icons.Default.PlayArrow,
             onClick = onPlayDaily,
-            containerColor = WordlePrimaryAction,
-            contentColor = WordleSurface
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -66,8 +64,8 @@ fun MenuScreen(
             text = "Custom Wordle",
             icon = Icons.Default.PlayArrow,
             onClick = onPlayCustom,
-            containerColor = WordlePrimaryAction,
-            contentColor = WordleSurface
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -112,14 +110,14 @@ fun MenuScreen(
                 text = "How to play",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = WordleTitle.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
         }
         
         Text(
             text = "v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
-            color = WordleTitle.copy(alpha = 0.4f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
             modifier = Modifier.padding(top = 16.dp)
         )
     }
@@ -131,8 +129,8 @@ fun MenuButton(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    containerColor: androidx.compose.ui.graphics.Color = WordleSurface,
-    contentColor: androidx.compose.ui.graphics.Color = WordleTitle
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Button(
         onClick = onClick,
@@ -166,14 +164,15 @@ fun MenuButton(
 @Preview(showBackground = true)
 @Composable
 fun MenuScreenPreview() {
-    MenuScreen(
-        isAuthenticated = false,
-        onProfileClick = {},
-        onPlayDaily = {},
-        onPlayCustom = {},
-        onLoginClick = {},
-        onSettingsClick = {},
-        onStatsClick = {}
-    )
+    WordleTheme {
+        MenuScreen(
+            isAuthenticated = false,
+            onProfileClick = {},
+            onPlayDaily = {},
+            onPlayCustom = {},
+            onLoginClick = {},
+            onSettingsClick = {},
+            onStatsClick = {}
+        )
+    }
 }
-

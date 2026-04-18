@@ -13,14 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.theme.WordleTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    isDarkTheme: Boolean,
+    isHighContrast: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    onHighContrastChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -33,12 +35,13 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WordleBackground,
-                    titleContentColor = WordleTitle
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = WordleBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = modifier
@@ -50,13 +53,11 @@ fun SettingsScreen(
             Text(
                 text = "Game Settings",
                 style = MaterialTheme.typography.titleMedium,
-                color = WordleTitle,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
             
             var hardMode by rememberSaveable { mutableStateOf(false) }
-            var darkTheme by rememberSaveable { mutableStateOf(false) }
-            var highContrast by rememberSaveable { mutableStateOf(false) }
 
             SettingsToggle(
                 label = "Hard Mode",
@@ -67,22 +68,25 @@ fun SettingsScreen(
             SettingsToggle(
                 label = "Dark Theme",
                 description = "Toggle between light and dark themes",
-                checked = darkTheme,
-                onCheckedChange = { darkTheme = it }
+                checked = isDarkTheme,
+                onCheckedChange = onDarkThemeChange
             )
             SettingsToggle(
                 label = "High Contrast Mode",
                 description = "For improved color vision",
-                checked = highContrast,
-                onCheckedChange = { highContrast = it }
+                checked = isHighContrast,
+                onCheckedChange = onHighContrastChange
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
             Text(
                 text = "Feedback & Support",
                 style = MaterialTheme.typography.titleMedium,
-                color = WordleTitle,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
             
@@ -109,10 +113,26 @@ fun SettingsToggle(
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(text = description, style = MaterialTheme.typography.bodySmall, color = WordleTitle.copy(alpha = 0.6f))
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.bodyLarge, 
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = description, 
+                style = MaterialTheme.typography.bodySmall, 
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked, 
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        )
     }
 }
 
@@ -120,6 +140,12 @@ fun SettingsToggle(
 @Composable
 fun SettingsScreenPreview() {
     WordleTheme {
-        SettingsScreen(onBack = {})
+        SettingsScreen(
+            onBack = {},
+            isDarkTheme = false,
+            isHighContrast = false,
+            onDarkThemeChange = {},
+            onHighContrastChange = {}
+        )
     }
 }

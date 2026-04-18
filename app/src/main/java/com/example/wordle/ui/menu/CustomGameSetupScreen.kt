@@ -21,9 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.theme.WordleTitle
 
 @Composable
 fun CustomGameSetupScreen(
@@ -36,7 +34,7 @@ fun CustomGameSetupScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(WordleBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -45,14 +43,14 @@ fun CustomGameSetupScreen(
             text = "Custom Wordle",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = WordleTitle
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = "Choose the number of guesses",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 12.dp, bottom = 32.dp),
-            color = WordleTitle
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
         Row(
@@ -70,7 +68,7 @@ fun CustomGameSetupScreen(
             Text(
                 text = selectedGuesses.toString(),
                 style = MaterialTheme.typography.headlineMedium,
-                color = WordleTitle,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
 
