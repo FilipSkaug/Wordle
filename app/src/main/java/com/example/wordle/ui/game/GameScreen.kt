@@ -1,5 +1,6 @@
 package com.example.wordle.ui.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,72 +13,38 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.wordle.ui.WordleKeyboard
-import com.example.wordle.ui.theme.WordleBackground
-import com.example.wordle.ui.theme.WordleTextSecondary
+import com.example.wordle.ui.stats.StatsContent
+import com.example.wordle.ui.stats.StatsDialog
 import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.theme.WordleTitle
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     uiState: GameUiState,
-    onKeyPress: (String) -> Unit,
-    onBack: () -> Unit,
+    onCloseStats: () -> Unit,
+    onStartCustomDefault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "WORDLE",
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 4.sp
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Show How to Play menu */ }) {
-                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "How to Play")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WordleBackground,
-                    titleContentColor = WordleTitle,
-                    navigationIconContentColor = WordleTitle,
-                    actionIconContentColor = WordleTitle
-                )
-            )
-        },
-        containerColor = WordleBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -87,41 +54,131 @@ fun GameScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "WORDLE",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 4.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            uiState.topBannerMessage?.let { banner ->
+                Text(
+                    text = banner,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (uiState.gameOutcome == null) {
                 Text(
                     text = uiState.statusText,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = WordleTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
-
-                uiState.errorMessage?.let { error ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = WordleTextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    GuessGrid(
-                        rows = uiState.rows,
-                        modifier = Modifier.verticalScroll(rememberScrollState())
-                    )
-                }
             }
 
-            WordleKeyboard(
-                keyStates = uiState.keyStates,
-                onKeyPress = onKeyPress
+            uiState.errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val showResult = uiState.gameOutcome != null && uiState.isResultScreenVisible
+                if (showResult) {
+                    GameResultContent(
+                        outcome = uiState.gameOutcome,
+                        targetWord = uiState.revealedTargetWord,
+                        stats = uiState.stats,
+                        onStartCustomDefault = onStartCustomDefault,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        GuessGrid(rows = uiState.rows)
+                    }
+                }
+            }
+        }
+    }
+
+    if (uiState.isStatsDialogVisible) {
+        StatsDialog(
+            stats = uiState.stats,
+            onDismiss = onCloseStats
+        )
+    }
+}
+
+@Composable
+private fun GameResultContent(
+    outcome: GameOutcome?,
+    targetWord: String?,
+    stats: com.example.wordle.data.stats.UserStats,
+    onStartCustomDefault: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val title = when (outcome) {
+            GameOutcome.WON -> "You won"
+            GameOutcome.LOST -> "You lost"
+            null -> ""
+        }
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        if (!targetWord.isNullOrBlank()) {
+            Text(
+                text = targetWord.uppercase(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        StatsContent(stats = stats)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = onStartCustomDefault) {
+            Text("Play Custom Wordle")
         }
     }
 }
@@ -137,7 +194,9 @@ private fun GuessGrid(
     ) {
         rows.forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (row.isShaking) Modifier.shake() else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 row.tiles.forEach { tile ->
@@ -154,21 +213,54 @@ private fun GuessGrid(
 }
 
 @Composable
+private fun Modifier.shake(): Modifier {
+    val infiniteTransition = rememberInfiniteTransition(label = "shake")
+    val offsetX = infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 100, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shakeOffset"
+    ).value
+    return this.graphicsLayer(translationX = offsetX)
+}
+
+@Composable
 private fun LetterTile(
     tile: TileUiState,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 56.dp
+    size: Dp = 56.dp
 ) {
+    val backgroundColor = when (tile.state) {
+        TileVisualState.CORRECT -> WordleTheme.colors.correct
+        TileVisualState.PRESENT -> WordleTheme.colors.present
+        TileVisualState.ABSENT -> WordleTheme.colors.absent
+        TileVisualState.EMPTY, TileVisualState.TYPING -> MaterialTheme.colorScheme.surface
+    }
+
+    val borderColor = when (tile.state) {
+        TileVisualState.EMPTY -> MaterialTheme.colorScheme.outlineVariant
+        TileVisualState.TYPING -> MaterialTheme.colorScheme.outline
+        else -> backgroundColor
+    }
+
+    val textColor = when (tile.state) {
+        TileVisualState.EMPTY, TileVisualState.TYPING -> MaterialTheme.colorScheme.onSurface
+        else -> Color.White
+    }
+
     Box(
         modifier = modifier
             .size(size)
-            .background(tile.state.getBackgroundColor(), RoundedCornerShape(12.dp))
-            .border(2.dp, tile.state.getBorderColor(), RoundedCornerShape(12.dp)),
+            .background(backgroundColor, RoundedCornerShape(12.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = tile.letter?.toString() ?: "",
-            color = tile.state.getTextColor(),
+            color = textColor,
             style = if (size < 40.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -207,9 +299,8 @@ private fun GameScreenPreview() {
                 ),
                 statusText = "Round 1 of 6"
             ),
-            onKeyPress = {},
-            onBack = {},
-            modifier = Modifier
+            onCloseStats = {},
+            onStartCustomDefault = {}
         )
     }
 }

@@ -23,8 +23,8 @@ class WordProvider {
      * Returns the daily word based on the current date.
      * The word is deterministically selected from the Firestore `word_bank`.
      */
-    fun getDailyWord(onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
-        firestore.collection("Words").document("English").get()
+    fun getDailyWord(language: String = "English2", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
+        firestore.collection("Words").document(language).get()
             .addOnSuccessListener { document ->
                 val wordBank = (document["word_bank"] as? List<*>)?.filterIsInstance<String>()
                 cachedWordBank = wordBank
@@ -41,10 +41,11 @@ class WordProvider {
     }
 
     /**
-     * Fetches a random word from the Firestore collection `Words`, document `English`, array `word_bank`.
+     * Fetches a random word from the Firestore collection `Words`, document for the specified language.
+     * Defaults to "English" if no language is provided.
      */
-    fun getRandomWord(onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
-        firestore.collection("Words").document("English").get()
+    fun getRandomWord(language: String = "English2", onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
+        firestore.collection("Words").document(language).get()
             .addOnSuccessListener { document ->
                 val wordBank = (document["word_bank"] as? List<*>)?.filterIsInstance<String>()
                 cachedWordBank = wordBank
@@ -52,7 +53,33 @@ class WordProvider {
                     val randomWord = wordBank[Random.nextInt(wordBank.size)]
                     onSuccess(randomWord)
                 } else {
-                    onFailure(Exception("Word bank is empty or missing."))
+                    onFailure(Exception("Word bank is empty or missing for language: $language."))
+                }
+            }
+            .addOnFailureListener { exception ->
+                onFailure(exception)
+            }
+    }
+
+    /**
+     * Checks if the input word exists in the Firestore `valid_words` array for the specified language.
+     * Defaults to "English" if no language is provided.
+     */
+    fun isWordValid(word: String, language: String = "English2", onSuccess: (Boolean) -> Unit, onFailure: (Exception) -> Unit) {
+        val firstLetter = word.firstOrNull()?.lowercaseChar()
+        if (firstLetter == null || !firstLetter.isLetter()) {
+            onFailure(Exception("Invalid word: $word"))
+            return
+        }
+
+        firestore.collection("Words").document(language).get()
+            .addOnSuccessListener { document ->
+                val validWordsMap = document["valid_words"] as? Map<*, *>
+                val validWords = validWordsMap?.get(firstLetter.toString()) as? List<*>
+                if (validWords != null) {
+                    onSuccess(validWords.filterIsInstance<String>().any { it.equals(word, ignoreCase = true) })
+                } else {
+                    onFailure(Exception("Valid words list is empty or missing for letter: $firstLetter in language: $language."))
                 }
             }
             .addOnFailureListener { exception ->

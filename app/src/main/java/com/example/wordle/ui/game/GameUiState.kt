@@ -14,6 +14,11 @@ import com.example.wordle.ui.theme.WordleTextPrimary
 const val DEFAULT_WORD_LENGTH = 5
 const val DEFAULT_MAX_GUESSES = 6
 
+enum class GameOutcome {
+    WON,
+    LOST
+}
+
 data class GameUiState(
     val rows: List<GuessRowUiState> = emptyList(),
     val statusText: String = "Loading word...",
@@ -21,14 +26,24 @@ data class GameUiState(
     val isStatsDialogVisible: Boolean = false,
     val isTargetWordLoaded: Boolean = false,
     val keyStates: Map<Char, KeyState> = emptyMap(),
+    val gameOutcome: GameOutcome? = null,
+    val revealedTargetWord: String? = null,
     val maxGuesses: Int = DEFAULT_MAX_GUESSES,
     val wordLength: Int = DEFAULT_WORD_LENGTH,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val topBannerMessage: String? = null,
+    /**
+     * Controls whether the end-of-game screen (You won/You lost + stats) should be shown.
+     * The game can be finished (gameOutcome != null) while this is false, e.g. when returning
+     * to today's already-played board from the menu.
+     */
+    val isResultScreenVisible: Boolean = false
 )
 
 data class GuessRowUiState(
-    val tiles: List<TileUiState>
+    val tiles: List<TileUiState>,
+    val isShaking: Boolean = false // Added to indicate if the row should shake
 )
 
 data class TileUiState(

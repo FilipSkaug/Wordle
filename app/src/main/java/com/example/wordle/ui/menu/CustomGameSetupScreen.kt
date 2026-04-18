@@ -27,9 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.wordle.ui.theme.WordleBackground
-import com.example.wordle.ui.theme.WordleTheme
 import com.example.wordle.ui.theme.WordleTitle
+import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
 fun CustomGameSetupScreen(
@@ -47,7 +46,7 @@ fun CustomGameSetupScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(WordleBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -56,7 +55,7 @@ fun CustomGameSetupScreen(
             text = "Custom Wordle",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = WordleTitle
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -85,7 +84,8 @@ fun CustomGameSetupScreen(
         Text(
             text = "Number of guesses: $selectedGuesses",
             style = MaterialTheme.typography.bodyLarge,
-            color = WordleTitle
+            modifier = Modifier.padding(top = 12.dp, bottom = 32.dp),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
         Row(
@@ -101,7 +101,12 @@ fun CustomGameSetupScreen(
                 Text("-")
             }
 
-            Spacer(modifier = Modifier.width(32.dp))
+            Text(
+                text = selectedGuesses.toString(),
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
 
             Button(
                 onClick = { if (selectedGuesses < 20) onGuessesChanged(selectedGuesses + 1) },
