@@ -54,16 +54,9 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold
             )
             
-            var hardMode by rememberSaveable { mutableStateOf(false) }
             var darkTheme by rememberSaveable { mutableStateOf(false) }
             var highContrast by rememberSaveable { mutableStateOf(false) }
 
-            SettingsToggle(
-                label = "Hard Mode",
-                description = "Any revealed hints must be used in subsequent guesses",
-                checked = hardMode,
-                onCheckedChange = { hardMode = it }
-            )
             SettingsToggle(
                 label = "Dark Theme",
                 description = "Toggle between light and dark themes",

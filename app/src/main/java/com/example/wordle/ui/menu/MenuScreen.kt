@@ -70,17 +70,12 @@ fun MenuScreen(
             contentColor = WordleTitle
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        MenuButton(
-            text = "Custom Wordle",
-            icon = Icons.Default.PlayArrow,
-            onClick = onPlayCustom,
-            containerColor = WordlePrimaryAction,
-            contentColor = WordleSurface
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            color = WordleTitle.copy(alpha = 0.2f)
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
             MenuButton(
