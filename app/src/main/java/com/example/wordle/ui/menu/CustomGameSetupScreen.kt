@@ -14,23 +14,35 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.wordle.ui.theme.WordleTitle
 import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
 fun CustomGameSetupScreen(
     selectedGuesses: Int,
     onGuessesChanged: (Int) -> Unit,
-    onStartGame: () -> Unit,
+    onStartGame: (String, Boolean, Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var customWord by remember { mutableStateOf("") }
+    var validateWords by remember { mutableStateOf(true) }
+    var hardMode by remember { mutableStateOf(false) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -46,8 +58,31 @@ fun CustomGameSetupScreen(
             color = MaterialTheme.colorScheme.onBackground
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val maxChar = 9
+        OutlinedTextField(
+            value = customWord,
+            onValueChange = { newValue ->
+                if (newValue.length <= maxChar && newValue.all { it.isLetter() }) {
+                    customWord = newValue.uppercase()
+                    errorText = null
+                }
+            },
+            label = { Text("Custom Solution Word") },
+            placeholder = { Text("Enter word...") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = errorText != null,
+            supportingText = {
+                errorText?.let { Text(it) }
+            },
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            text = "Choose the number of guesses",
+            text = "Number of guesses: $selectedGuesses",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 12.dp, bottom = 32.dp),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
@@ -55,10 +90,11 @@ fun CustomGameSetupScreen(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(top = 8.dp)
         ) {
             Button(
-                onClick = { if (selectedGuesses > 4) onGuessesChanged(selectedGuesses - 1) },
+                onClick = { if (selectedGuesses > 1) onGuessesChanged(selectedGuesses - 1) },
                 modifier = Modifier.width(64.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -73,7 +109,7 @@ fun CustomGameSetupScreen(
             )
 
             Button(
-                onClick = { if (selectedGuesses < 10) onGuessesChanged(selectedGuesses + 1) },
+                onClick = { if (selectedGuesses < 20) onGuessesChanged(selectedGuesses + 1) },
                 modifier = Modifier.width(64.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -81,10 +117,69 @@ fun CustomGameSetupScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Hard Mode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = WordleTitle
+                )
+                Text(
+                    text = "Any revealed hints must be used in subsequent guesses",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WordleTitle.copy(alpha = 0.6f)
+                )
+            }
+            Switch(
+                checked = hardMode,
+                onCheckedChange = { hardMode = it }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Validate guesses",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = WordleTitle
+                )
+                Text(
+                    text = "Only works for 5-letter words",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WordleTitle.copy(alpha = 0.6f)
+                )
+            }
+            Switch(
+                checked = validateWords,
+                onCheckedChange = { validateWords = it },
+                enabled = customWord.length == 5
+            )
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = onStartGame,
+            onClick = {
+                if (customWord.isBlank()) {
+                    errorText = "Please enter a word"
+                } else if (customWord.length < 3) {
+                    errorText = "Word too short"
+                } else {
+                    onStartGame(customWord, validateWords, hardMode)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -109,7 +204,7 @@ private fun CustomGameSetupScreenPreview() {
         CustomGameSetupScreen(
             selectedGuesses = 6,
             onGuessesChanged = {},
-            onStartGame = {},
+            onStartGame = { _, _, _ -> },
             onBack = {}
         )
     }

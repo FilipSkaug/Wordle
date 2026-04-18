@@ -51,7 +51,9 @@ private val DarkColorScheme = darkColorScheme(
     background = Color(0xFF121213),
     onBackground = Color.White,
     surface = Color(0xFF121213),
-    onSurface = Color.White
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF272729),
+    onSurfaceVariant = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -64,7 +66,9 @@ private val LightColorScheme = lightColorScheme(
     background = WordleBackground,
     onBackground = WordleTextPrimary,
     surface = WordleSurface,
-    onSurface = WordleTextPrimary
+    onSurface = WordleTextPrimary,
+    surfaceVariant = Color(0xFFE3E3E1),
+    onSurfaceVariant = WordleTextPrimary
 )
 
 // High Contrast / Colorblind friendly color scheme for standard Material components
@@ -86,8 +90,8 @@ private val HighContrastColorScheme = lightColorScheme(
 fun WordleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     highContrast: Boolean = false,
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color is disabled to keep Wordle branding
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

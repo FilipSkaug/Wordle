@@ -11,8 +11,8 @@ import com.example.wordle.ui.theme.TilePresent
 import com.example.wordle.ui.theme.TileTypingBorder
 import com.example.wordle.ui.theme.WordleTextPrimary
 
-const val WORD_LENGTH = 5
-const val MAX_GUESSES = 6
+const val DEFAULT_WORD_LENGTH = 5
+const val DEFAULT_MAX_GUESSES = 6
 
 enum class GameOutcome {
     WON,
@@ -20,9 +20,7 @@ enum class GameOutcome {
 }
 
 data class GameUiState(
-    val rows: List<GuessRowUiState> = List(MAX_GUESSES) {
-        GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
-    },
+    val rows: List<GuessRowUiState> = emptyList(),
     val statusText: String = "Loading word...",
     val stats: UserStats = UserStats(),
     val isStatsDialogVisible: Boolean = false,
@@ -30,7 +28,8 @@ data class GameUiState(
     val keyStates: Map<Char, KeyState> = emptyMap(),
     val gameOutcome: GameOutcome? = null,
     val revealedTargetWord: String? = null,
-    val maxGuesses: Int = MAX_GUESSES,
+    val maxGuesses: Int = DEFAULT_MAX_GUESSES,
+    val wordLength: Int = DEFAULT_WORD_LENGTH,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val topBannerMessage: String? = null,

@@ -66,7 +66,7 @@ fun KeyboardKey(
 // Function for the entire keyboard layout
 @Composable
 fun WordleKeyboard(
-    // Map passing the currentt state of any typed letters
+    // Map passing the current state of any typed letters
     keyStates: Map<Char, KeyState> = emptyMap(),
     // Sends key value back to MainActivity
     onKeyPress: (String) -> Unit

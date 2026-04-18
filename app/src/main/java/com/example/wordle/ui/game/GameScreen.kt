@@ -28,11 +28,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.wordle.ui.theme.WordleTheme
-import com.example.wordle.ui.stats.StatsDialog
 import com.example.wordle.ui.stats.StatsContent
+import com.example.wordle.ui.stats.StatsDialog
+import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
 fun GameScreen(
@@ -49,8 +50,9 @@ fun GameScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = "WORDLE",
@@ -194,11 +196,16 @@ private fun GuessGrid(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (row.isShaking) Modifier.shake() else Modifier), // Apply shake animation if isShaking is true
+                    .then(if (row.isShaking) Modifier.shake() else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 row.tiles.forEach { tile ->
-                    LetterTile(tile = tile)
+                    val tileSize = when {
+                        row.tiles.size <= 5 -> 56.dp
+                        row.tiles.size <= 8 -> 44.dp
+                        else -> 32.dp
+                    }
+                    LetterTile(tile = tile, size = tileSize)
                 }
             }
         }
@@ -207,14 +214,15 @@ private fun GuessGrid(
 
 @Composable
 private fun Modifier.shake(): Modifier {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "shake")
     val offsetX = infiniteTransition.animateFloat(
         initialValue = -10f,
         targetValue = 10f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 100, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "shakeOffset"
     ).value
     return this.graphicsLayer(translationX = offsetX)
 }
@@ -222,9 +230,9 @@ private fun Modifier.shake(): Modifier {
 @Composable
 private fun LetterTile(
     tile: TileUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: Dp = 56.dp
 ) {
-    // Get colors from theme based on state
     val backgroundColor = when (tile.state) {
         TileVisualState.CORRECT -> WordleTheme.colors.correct
         TileVisualState.PRESENT -> WordleTheme.colors.present
@@ -235,7 +243,7 @@ private fun LetterTile(
     val borderColor = when (tile.state) {
         TileVisualState.EMPTY -> MaterialTheme.colorScheme.outlineVariant
         TileVisualState.TYPING -> MaterialTheme.colorScheme.outline
-        else -> backgroundColor // Matches background for filled states
+        else -> backgroundColor
     }
 
     val textColor = when (tile.state) {
@@ -245,7 +253,7 @@ private fun LetterTile(
 
     Box(
         modifier = modifier
-            .size(56.dp)
+            .size(size)
             .background(backgroundColor, RoundedCornerShape(12.dp))
             .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
@@ -253,7 +261,7 @@ private fun LetterTile(
         Text(
             text = tile.letter?.toString() ?: "",
             color = textColor,
-            style = MaterialTheme.typography.titleLarge,
+            style = if (size < 40.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
     }
@@ -284,10 +292,10 @@ private fun GameScreenPreview() {
                             TileUiState()
                         )
                     ),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() }),
-                    GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() }),
+                    GuessRowUiState(List(DEFAULT_WORD_LENGTH) { TileUiState() })
                 ),
                 statusText = "Round 1 of 6"
             ),

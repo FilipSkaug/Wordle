@@ -34,21 +34,18 @@ object WordEvaluator {
 
     @JvmStatic
     fun evaluate(guess: String, target: String): EvaluationResult {
-        if (guess.length != WORD_LENGTH) {
-            return EvaluationResult.InvalidLength(guess.length, WORD_LENGTH)
+        if (guess.length != target.length) {
+            return EvaluationResult.InvalidLength(guess.length, target.length)
         }
 
-        if (target.length != WORD_LENGTH) {
-            return EvaluationResult.InvalidTargetLength(target.length, WORD_LENGTH)
-        }
-
+        val wordLength = target.length
         val guessUpper = guess.uppercase()
         val targetUpper = target.uppercase()
-        val result = List(WORD_LENGTH) { TileVisualState.ABSENT }.toMutableList()
+        val result = List(wordLength) { TileVisualState.ABSENT }.toMutableList()
         val targetLetterCount = mutableMapOf<Char, Int>()
 
         // First pass: mark correct letters and count target letters
-        for (i in 0 until WORD_LENGTH) {
+        for (i in 0 until wordLength) {
             val guessChar = guessUpper[i]
             val targetChar = targetUpper[i]
 
@@ -60,7 +57,7 @@ object WordEvaluator {
         }
 
         // Second pass: mark present letters (used in wrong position)
-        for (i in 0 until WORD_LENGTH) {
+        for (i in 0 until wordLength) {
             if (result[i] != TileVisualState.CORRECT) {
                 val guessChar = guessUpper[i]
                 val remainingCount = targetLetterCount[guessChar] ?: 0
@@ -80,8 +77,7 @@ object WordEvaluator {
      */
     @JvmStatic
     fun isCorrectWord(guess: String, target: String): Boolean {
-        return guess.length == WORD_LENGTH && 
-               target.length == WORD_LENGTH && 
-               guess.uppercase() == target.uppercase()
+        return guess.length == target.length &&
+                guess.equals(target, ignoreCase = true)
     }
 }

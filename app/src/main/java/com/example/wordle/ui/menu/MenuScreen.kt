@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.wordle.BuildConfig
+import com.example.wordle.ui.theme.WordleTitle
 import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
@@ -57,32 +59,40 @@ fun MenuScreen(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
         MenuButton(
-            text = "Custom Wordle",
-            icon = Icons.Default.PlayArrow,
+            text = "Custom Game",
+            icon = Icons.Default.Edit,
             onClick = onPlayCustom,
             containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = MaterialTheme.colorScheme.onSecondary
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            color = WordleTitle.copy(alpha = 0.2f)
+        )
 
         Row(modifier = Modifier.fillMaxWidth()) {
             MenuButton(
                 text = "Statistics",
                 icon = Icons.Default.BarChart,
                 onClick = onStatsClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
             )
             Spacer(modifier = Modifier.width(16.dp))
             MenuButton(
                 text = "Settings",
                 icon = Icons.Default.Settings,
                 onClick = onSettingsClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
             )
         }
 
@@ -93,13 +103,17 @@ fun MenuScreen(
             MenuButton(
                 text = "Profile",
                 icon = Icons.Default.AccountCircle,
-                onClick = onProfileClick
+                onClick = onProfileClick,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             MenuButton(
                 text = "Login / Sign up",
                 icon = Icons.Default.AccountCircle,
-                onClick = onLoginClick
+                onClick = onLoginClick,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 

@@ -5,10 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,15 +52,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
-            
-            var hardMode by rememberSaveable { mutableStateOf(false) }
 
-            SettingsToggle(
-                label = "Hard Mode",
-                description = "Any revealed hints must be used in subsequent guesses",
-                checked = hardMode,
-                onCheckedChange = { hardMode = it }
-            )
             SettingsToggle(
                 label = "Dark Theme",
                 description = "Toggle between light and dark themes",
@@ -77,25 +65,6 @@ fun SettingsScreen(
                 checked = isHighContrast,
                 onCheckedChange = onHighContrastChange
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            Text(
-                text = "Feedback & Support",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-            
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Help")
-            }
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Contact Support")
-            }
         }
     }
 }
