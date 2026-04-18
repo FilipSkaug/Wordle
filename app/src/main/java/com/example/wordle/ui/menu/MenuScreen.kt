@@ -81,14 +81,18 @@ fun MenuScreen(
                 text = "Statistics",
                 icon = Icons.Default.BarChart,
                 onClick = onStatsClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
             )
             Spacer(modifier = Modifier.width(16.dp))
             MenuButton(
                 text = "Settings",
                 icon = Icons.Default.Settings,
                 onClick = onSettingsClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
             )
         }
 
@@ -99,13 +103,17 @@ fun MenuScreen(
             MenuButton(
                 text = "Profile",
                 icon = Icons.Default.AccountCircle,
-                onClick = onProfileClick
+                onClick = onProfileClick,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             MenuButton(
                 text = "Login / Sign up",
                 icon = Icons.Default.AccountCircle,
-                onClick = onLoginClick
+                onClick = onLoginClick,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 

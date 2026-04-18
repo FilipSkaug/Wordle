@@ -65,25 +65,6 @@ fun SettingsScreen(
                 checked = isHighContrast,
                 onCheckedChange = onHighContrastChange
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            Text(
-                text = "Feedback & Support",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-            
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Help")
-            }
-            TextButton(onClick = { /* TODO */ }) {
-                Text("Contact Support")
-            }
         }
     }
 }

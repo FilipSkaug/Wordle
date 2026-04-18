@@ -59,6 +59,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val settingsViewModel = viewModel<SettingsViewModel>()
+
+            // Initialize theme from system setting on first app launch
+            LaunchedEffect(Unit) {
+                settingsViewModel.initializeThemeFromSystem(this@MainActivity)
+            }
+
             val isDarkTheme by settingsViewModel.isDarkTheme.collectAsStateWithLifecycle()
             val isHighContrast by settingsViewModel.isHighContrast.collectAsStateWithLifecycle()
 
