@@ -5,33 +5,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wordle.data.WordProvider
 import com.example.wordle.data.stats.SharedPreferencesStatsRepository
-import com.example.wordle.ui.WordleKeyboard
+
 import com.example.wordle.ui.auth.AuthScreen
 import com.example.wordle.ui.auth.AuthViewModel
 import com.example.wordle.ui.game.GameConfig
@@ -102,12 +92,6 @@ class MainActivity : ComponentActivity() {
                                 uiState = gameUiState,
                                 onKeyPress = gameViewModel::onKeyPress,
                                 onBack = { currentScreen = Screen.Menu },
-                                onOpenStats = gameViewModel::onOpenStats,
-                                onCloseStats = gameViewModel::onCloseStats,
-                                onLogout = {
-                                    authViewModel.logout()
-                                    currentScreen = Screen.Menu
-                                }
                             )
                         }
 

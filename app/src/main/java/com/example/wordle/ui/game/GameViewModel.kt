@@ -295,17 +295,6 @@ class GameViewModel(
         _uiState.value = currentState.copy(rows = newRows)
     }
 
-    fun onOpenStats() {
-        val latestStats = statsRepository.load()
-        _uiState.value = _uiState.value.copy(
-            stats = latestStats,
-            isStatsDialogVisible = true
-        )
-    }
-
-    fun onCloseStats() {
-        _uiState.value = _uiState.value.copy(isStatsDialogVisible = false)
-    }
 
     private fun updateTile(currentState: GameUiState, r: Int, c: Int, newTile: TileUiState) {
         val newRows = currentState.rows.toMutableList()

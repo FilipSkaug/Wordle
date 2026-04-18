@@ -17,8 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,7 +39,6 @@ import com.example.wordle.ui.theme.WordleBackground
 import com.example.wordle.ui.theme.WordleTextSecondary
 import com.example.wordle.ui.theme.WordleTheme
 import com.example.wordle.ui.theme.WordleTitle
-import com.example.wordle.ui.stats.StatsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,9 +46,6 @@ fun GameScreen(
     uiState: GameUiState,
     onKeyPress: (String) -> Unit,
     onBack: () -> Unit,
-    onOpenStats: () -> Unit,
-    onCloseStats: () -> Unit,
-    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -129,13 +123,6 @@ fun GameScreen(
                 onKeyPress = onKeyPress
             )
         }
-    }
-
-    if (uiState.isStatsDialogVisible) {
-        StatsDialog(
-            stats = uiState.stats,
-            onDismiss = onCloseStats
-        )
     }
 }
 
@@ -222,9 +209,6 @@ private fun GameScreenPreview() {
             ),
             onKeyPress = {},
             onBack = {},
-            onOpenStats = {},
-            onCloseStats = {},
-            onLogout = {},
             modifier = Modifier
         )
     }
