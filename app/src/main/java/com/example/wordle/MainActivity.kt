@@ -20,24 +20,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wordle.data.WordProvider
+import com.example.wordle.data.daily.DailyPlayRepository
+import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 import com.example.wordle.ui.WordleKeyboard
 import com.example.wordle.ui.auth.AuthScreen
 import com.example.wordle.ui.auth.AuthViewModel
+import com.example.wordle.ui.game.GameConfig
+import com.example.wordle.ui.game.GameMode
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
+import com.example.wordle.ui.game.GameViewModelFactory
+import com.example.wordle.ui.menu.CustomGameSetupScreen
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
 import com.example.wordle.ui.settings.SettingsViewModel
 import com.example.wordle.ui.theme.WordleTheme
+import com.example.wordle.ui.user.UserScreen
 
 enum class Screen {
-    Menu, Game, Auth, Settings
+    Menu, Game, Auth, Settings, User, CustomSetup
 }
 
 class MainActivity : ComponentActivity() {
@@ -55,8 +64,20 @@ class MainActivity : ComponentActivity() {
             ) {
                 val authViewModel = viewModel<AuthViewModel>()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                
+
                 var currentScreen by rememberSaveable { mutableStateOf(Screen.Menu) }
+                var isStatsDialogVisible by rememberSaveable { mutableStateOf(false) }
+                var selectedCustomGuesses by rememberSaveable { mutableStateOf(MAX_CUSTOM_GUESSES_DEFAULT) }
+                var currentGameMode by rememberSaveable { mutableStateOf(GameMode.DAILY.name) }
+                var currentMaxGuesses by rememberSaveable { mutableStateOf(DEFAULT_DAILY_GUESSES) }
+                var topBannerMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+                val currentGameConfig = GameConfig(
+                    mode = GameMode.valueOf(currentGameMode),
+                    maxGuesses = currentMaxGuesses
+                )
+
+                val dailyPlayRepository = remember { DailyPlayRepository(applicationContext) }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -64,44 +85,101 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (currentScreen) {
                         Screen.Menu -> MenuScreen(
-                            onPlayDaily = { currentScreen = Screen.Game },
+                            isAuthenticated = authUiState.isAuthenticated,
+                            onProfileClick = { currentScreen = Screen.User },
+                            onPlayDaily = {
+                                isStatsDialogVisible = false
+                                if (dailyPlayRepository.hasPlayedTodayUtc()) {
+                                    topBannerMessage =
+                                        "You've already played today's Daily Wordle. Starting a custom game with a random word."
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = DEFAULT_CUSTOM_GUESSES
+                                } else {
+                                    topBannerMessage = null
+                                    currentGameMode = GameMode.DAILY.name
+                                    currentMaxGuesses = DEFAULT_DAILY_GUESSES
+                                }
+                                currentScreen = Screen.Game
+                            },
+                            onPlayCustom = { currentScreen = Screen.CustomSetup },
                             onLoginClick = { currentScreen = Screen.Auth },
                             onSettingsClick = { currentScreen = Screen.Settings },
-                            onStatsClick = { /* TODO */ }
+                            onStatsClick = { isStatsDialogVisible = true }
                         )
 
-                        Screen.Game -> {
-                            val gameViewModel = viewModel<GameViewModel>()
-                            val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
-
+                        Screen.CustomSetup -> {
                             BackHandler { currentScreen = Screen.Menu }
-                            
-                            AuthenticatedApp(
-                                gameUiState = gameUiState,
-                                onKeyPress = gameViewModel::onKeyPress,
-                                onLogout = {
-                                    authViewModel.logout()
-                                    currentScreen = Screen.Menu
+                            CustomGameSetupScreen(
+                                selectedGuesses = selectedCustomGuesses,
+                                onGuessesChanged = { selectedCustomGuesses = it },
+                                onStartGame = {
+                                    topBannerMessage = null
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = selectedCustomGuesses
+                                    currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu }
                             )
                         }
 
+                        Screen.Game -> {
+                            val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                            val wordProvider = remember { WordProvider() }
+                            val gameViewModel = viewModel<GameViewModel>(
+                                factory = GameViewModelFactory(
+                                    statsRepository = statsRepository,
+                                    wordProvider = wordProvider,
+                                    dailyPlayRepository = dailyPlayRepository
+                                )
+                            )
+                            val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
+
+                            LaunchedEffect(currentGameConfig.mode, currentGameConfig.maxGuesses, topBannerMessage) {
+                                gameViewModel.startGame(currentGameConfig, topBannerMessage = topBannerMessage)
+                            }
+
+                            BackHandler {
+                                gameViewModel.onLeaveGameScreen()
+                                currentScreen = Screen.Menu
+                            }
+
+                            AuthenticatedApp(
+                                gameUiState = gameUiState,
+                                onKeyPress = gameViewModel::onKeyPress,
+                                onOpenStats = gameViewModel::onOpenStats,
+                                onCloseStats = gameViewModel::onCloseStats,
+                                onStartCustomDefault = {
+                                    topBannerMessage = null
+                                    currentGameMode = GameMode.CUSTOM.name
+                                    currentMaxGuesses = DEFAULT_CUSTOM_GUESSES
+                                },
+                                onLogout = {
+                                    authViewModel.logout()
+                                    currentScreen = Screen.Menu
+                                },
+                                onBack = {
+                                    gameViewModel.onCloseStats()
+                                    gameViewModel.onLeaveGameScreen()
+                                    currentScreen = Screen.Menu
+                                }
+                            )
+                        }
+
                         Screen.Auth -> {
                             BackHandler { currentScreen = Screen.Menu }
-                            
+
                             LaunchedEffect(authUiState.isAuthenticated) {
                                 if (authUiState.isAuthenticated) {
                                     currentScreen = Screen.Menu
                                 }
                             }
-                            
+
                             AuthScreen(
                                 uiState = authUiState,
                                 onEmailChanged = authViewModel::onEmailChanged,
                                 onPasswordChanged = authViewModel::onPasswordChanged,
                                 onUsernameChanged = authViewModel::onUsernameChanged,
-                                onSubmit = { authViewModel.submit() },
+                                onSubmit = authViewModel::submit,
                                 onSwitchToLogin = authViewModel::showLogin,
                                 onSwitchToSignup = authViewModel::showSignup
                             )
@@ -117,7 +195,26 @@ class MainActivity : ComponentActivity() {
                                 onHighContrastChange = settingsViewModel::toggleHighContrast
                             )
                         }
+
+                        Screen.User -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            UserScreen(
+                                onNavigateBack = { currentScreen = Screen.Menu },
+                                onLogout = {
+                                    authViewModel.logout()
+                                    currentScreen = Screen.Menu
+                                }
+                            )
+                        }
                     }
+                }
+
+                if (isStatsDialogVisible) {
+                    val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
+                    com.example.wordle.ui.stats.StatsDialog(
+                        stats = statsRepository.load(),
+                        onDismiss = { isStatsDialogVisible = false }
+                    )
                 }
             }
         }
@@ -128,6 +225,9 @@ class MainActivity : ComponentActivity() {
 private fun AuthenticatedApp(
     gameUiState: com.example.wordle.ui.game.GameUiState,
     onKeyPress: (String) -> Unit,
+    onOpenStats: () -> Unit,
+    onCloseStats: () -> Unit,
+    onStartCustomDefault: () -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -147,20 +247,33 @@ private fun AuthenticatedApp(
                 TextButton(onClick = onBack) {
                     Text("Back")
                 }
-                TextButton(onClick = onLogout) {
-                    Text("Log out")
+                Row {
+                    TextButton(onClick = onOpenStats) {
+                        Text("Statistics")
+                    }
+                    TextButton(onClick = onLogout) {
+                        Text("Log out")
+                    }
                 }
             }
 
             GameScreen(
                 uiState = gameUiState,
+                onCloseStats = onCloseStats,
+                onStartCustomDefault = onStartCustomDefault,
                 modifier = Modifier.weight(1f)
             )
 
-            // Keyboard at the bottom
-            WordleKeyboard(
-                onKeyPress = onKeyPress
-            )
+            if (gameUiState.gameOutcome == null) {
+                WordleKeyboard(
+                    keyStates = gameUiState.keyStates,
+                    onKeyPress = onKeyPress
+                )
+            }
         }
     }
 }
+
+private const val DEFAULT_DAILY_GUESSES = 6
+private const val MAX_CUSTOM_GUESSES_DEFAULT = 6
+private const val DEFAULT_CUSTOM_GUESSES = 6

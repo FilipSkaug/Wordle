@@ -23,7 +23,10 @@ import com.example.wordle.ui.theme.WordleTheme
 
 @Composable
 fun MenuScreen(
+    isAuthenticated: Boolean,
+    onProfileClick: () -> Unit,
     onPlayDaily: () -> Unit,
+    onPlayCustom: () -> Unit,
     onLoginClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onStatsClick: () -> Unit,
@@ -57,9 +60,19 @@ fun MenuScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        MenuButton(
+            text = "Custom Wordle",
+            icon = Icons.Default.PlayArrow,
+            onClick = onPlayCustom,
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Row(modifier = Modifier.fillMaxWidth()) {
             MenuButton(
-                text = "Stats",
+                text = "Statistics",
                 icon = Icons.Default.BarChart,
                 onClick = onStatsClick,
                 modifier = Modifier.weight(1f)
@@ -75,11 +88,20 @@ fun MenuScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        MenuButton(
-            text = "Login / Sign up",
-            icon = Icons.Default.AccountCircle,
-            onClick = onLoginClick
-        )
+
+        if (isAuthenticated) {
+            MenuButton(
+                text = "Profile",
+                icon = Icons.Default.AccountCircle,
+                onClick = onProfileClick
+            )
+        } else {
+            MenuButton(
+                text = "Login / Sign up",
+                icon = Icons.Default.AccountCircle,
+                onClick = onLoginClick
+            )
+        }
 
         Spacer(modifier = Modifier.height(48.dp))
 
@@ -144,7 +166,10 @@ fun MenuButton(
 fun MenuScreenPreview() {
     WordleTheme {
         MenuScreen(
+            isAuthenticated = false,
+            onProfileClick = {},
             onPlayDaily = {},
+            onPlayCustom = {},
             onLoginClick = {},
             onSettingsClick = {},
             onStatsClick = {}

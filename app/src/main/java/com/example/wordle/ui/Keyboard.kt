@@ -108,7 +108,10 @@ fun WordleKeyboard(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             row3.forEach { key ->
                 val weight = if (key == "ENTER" || key == "⌫") 1.5f else 1f
-                val state = keyStates[key.first()] ?: KeyState.DEFAULT
+                val state = when (key) {
+                    "ENTER", "⌫" -> KeyState.DEFAULT
+                    else -> keyStates[key.first()] ?: KeyState.DEFAULT
+                }
 
                 KeyboardKey(
                     text = key,

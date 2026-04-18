@@ -1,5 +1,6 @@
 package com.example.wordle.ui.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,16 +24,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.wordle.ui.theme.WordleTheme
+import com.example.wordle.ui.stats.StatsDialog
+import com.example.wordle.ui.stats.StatsContent
 
 @Composable
 fun GameScreen(
     uiState: GameUiState,
+    onCloseStats: () -> Unit,
+    onStartCustomDefault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -53,18 +62,121 @@ fun GameScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = uiState.statusText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
+            uiState.topBannerMessage?.let { banner ->
+                Text(
+                    text = banner,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (uiState.gameOutcome == null) {
+                Text(
+                    text = uiState.statusText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            uiState.errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            GuessGrid(rows = uiState.rows)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val showResult = uiState.gameOutcome != null && uiState.isResultScreenVisible
+                if (showResult) {
+                    GameResultContent(
+                        outcome = uiState.gameOutcome,
+                        targetWord = uiState.revealedTargetWord,
+                        stats = uiState.stats,
+                        onStartCustomDefault = onStartCustomDefault,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        GuessGrid(rows = uiState.rows)
+                    }
+                }
+            }
+        }
+    }
 
-            Spacer(modifier = Modifier.weight(1f))
+    if (uiState.isStatsDialogVisible) {
+        StatsDialog(
+            stats = uiState.stats,
+            onDismiss = onCloseStats
+        )
+    }
+}
+
+@Composable
+private fun GameResultContent(
+    outcome: GameOutcome?,
+    targetWord: String?,
+    stats: com.example.wordle.data.stats.UserStats,
+    onStartCustomDefault: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val title = when (outcome) {
+            GameOutcome.WON -> "You won"
+            GameOutcome.LOST -> "You lost"
+            null -> ""
+        }
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        if (!targetWord.isNullOrBlank()) {
+            Text(
+                text = targetWord.uppercase(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        StatsContent(stats = stats)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = onStartCustomDefault) {
+            Text("Play Custom Wordle")
         }
     }
 }
@@ -80,7 +192,9 @@ private fun GuessGrid(
     ) {
         rows.forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (row.isShaking) Modifier.shake() else Modifier), // Apply shake animation if isShaking is true
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 row.tiles.forEach { tile ->
@@ -89,6 +203,20 @@ private fun GuessGrid(
             }
         }
     }
+}
+
+@Composable
+private fun Modifier.shake(): Modifier {
+    val infiniteTransition = rememberInfiniteTransition()
+    val offsetX = infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 100, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    ).value
+    return this.graphicsLayer(translationX = offsetX)
 }
 
 @Composable
@@ -162,7 +290,9 @@ private fun GameScreenPreview() {
                     GuessRowUiState(List(WORD_LENGTH) { TileUiState() })
                 ),
                 statusText = "Round 1 of 6"
-            )
+            ),
+            onCloseStats = {},
+            onStartCustomDefault = {}
         )
     }
 }
