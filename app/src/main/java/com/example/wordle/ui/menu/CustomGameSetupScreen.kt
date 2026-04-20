@@ -60,11 +60,10 @@ fun CustomGameSetupScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        val maxChar = 9
         OutlinedTextField(
             value = customWord,
             onValueChange = { newValue ->
-                if (newValue.length <= maxChar && newValue.all { it.isLetter() }) {
+                if (newValue.all { it.isLetter() }) {
                     customWord = newValue.uppercase()
                     errorText = null
                 }
@@ -174,8 +173,6 @@ fun CustomGameSetupScreen(
             onClick = {
                 if (customWord.isBlank()) {
                     errorText = "Please enter a word"
-                } else if (customWord.length < 3) {
-                    errorText = "Word too short"
                 } else {
                     onStartGame(customWord, validateWords, hardMode)
                 }
