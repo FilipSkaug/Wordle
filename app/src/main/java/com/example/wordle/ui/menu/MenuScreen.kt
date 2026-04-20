@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -28,6 +29,7 @@ fun MenuScreen(
     isAuthenticated: Boolean,
     hasPlayedDaily: Boolean,
     onProfileClick: () -> Unit,
+    onLeaderboardClick: () -> Unit,
     onPlayDaily: () -> Unit,
     onPlayCustom: () -> Unit,
     onLoginClick: () -> Unit,
@@ -105,6 +107,14 @@ fun MenuScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        if (isAuthenticated) {
+            MenuButton(
+                text = "Leaderboard",
+                icon = Icons.Filled.EmojiEvents,
+                onClick = onLeaderboardClick
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         if (isAuthenticated) {
             MenuButton(
@@ -190,6 +200,7 @@ fun MenuScreenPreview() {
             isAuthenticated = false,
             hasPlayedDaily = false,
             onProfileClick = {},
+            onLeaderboardClick = {},
             onPlayDaily = {},
             onPlayCustom = {},
             onLoginClick = {},

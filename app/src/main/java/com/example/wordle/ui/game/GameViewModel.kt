@@ -1,9 +1,11 @@
 package com.example.wordle.ui.game
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.wordle.data.WordProvider
 import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.StatsRepository
+import com.example.wordle.data.stats.UserStatsRemoteSync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -15,7 +17,8 @@ import kotlinx.coroutines.launch
 class GameViewModel(
     private val statsRepository: StatsRepository,
     private val wordProvider: WordProvider,
-    private val dailyPlayRepository: DailyPlayRepository
+    private val dailyPlayRepository: DailyPlayRepository,
+    private val userStatsRemoteSync: UserStatsRemoteSync
 ) : ViewModel() {
 
     private var targetWord: String? = null
@@ -354,6 +357,7 @@ class GameViewModel(
                             attempts = attempts
                         )
                         statsRepository.save(updatedStats)
+                        syncStatsToRemote(updatedStats)
                         dailyPlayRepository.markPlayedTodayUtc()
                         updatedStats // Use the new stats for the UI
                     } else {
@@ -382,6 +386,7 @@ class GameViewModel(
                             attempts = null
                         )
                         statsRepository.save(updatedStats)
+                        syncStatsToRemote(updatedStats)
                         dailyPlayRepository.markPlayedTodayUtc()
                         updatedStats
                     } else {
@@ -460,6 +465,12 @@ class GameViewModel(
         newTiles[c] = newTile
         newRows[r] = currentRowState.copy(tiles = newTiles)
         _uiState.value = currentState.copy(rows = newRows)
+    }
+
+    private fun syncStatsToRemote(stats: com.example.wordle.data.stats.UserStats) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { userStatsRemoteSync.syncStatsToFirestore(stats) }
+        }
     }
 
     private fun updateStatsForGameEnd(
