@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wordle.data.WordProvider
 import com.example.wordle.data.daily.DailyPlayRepository
+import com.example.wordle.data.stats.FirebaseUserStatsRemoteSync
 import com.example.wordle.data.stats.SharedPreferencesStatsRepository
 
 import com.example.wordle.ui.auth.AuthScreen
@@ -28,6 +29,8 @@ import com.example.wordle.ui.auth.AuthViewModel
 import com.example.wordle.ui.game.GameScreen
 import com.example.wordle.ui.game.GameViewModel
 import com.example.wordle.ui.game.GameViewModelFactory
+import com.example.wordle.ui.leaderboard.LeaderboardScreen
+import com.example.wordle.ui.leaderboard.LeaderboardViewModel
 import com.example.wordle.ui.menu.CustomGameSetupScreen
 import com.example.wordle.ui.menu.MenuScreen
 import com.example.wordle.ui.settings.SettingsScreen
@@ -36,7 +39,7 @@ import com.example.wordle.ui.theme.WordleTheme
 import com.example.wordle.ui.user.UserScreen
 
 enum class Screen {
-    Menu, Game, Auth, Settings, User, CustomSetup
+    Menu, Game, Auth, Settings, User, CustomSetup, Leaderboard
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,11 +70,13 @@ class MainActivity : ComponentActivity() {
                 val statsRepository = remember { SharedPreferencesStatsRepository(applicationContext) }
                 val wordProvider = remember { WordProvider() }
                 val dailyPlayRepository = remember { DailyPlayRepository(applicationContext) }
+                val userStatsRemoteSync = remember { FirebaseUserStatsRemoteSync() }
                 val gameViewModel = viewModel<GameViewModel>(
                     factory = GameViewModelFactory(
                         statsRepository = statsRepository,
                         wordProvider = wordProvider,
-                        dailyPlayRepository = dailyPlayRepository
+                        dailyPlayRepository = dailyPlayRepository,
+                        userStatsRemoteSync = userStatsRemoteSync
                     )
                 )
                 val gameUiState by gameViewModel.uiState.collectAsStateWithLifecycle()
@@ -85,6 +90,7 @@ class MainActivity : ComponentActivity() {
                             isAuthenticated = authUiState.isAuthenticated,
                             hasPlayedDaily = dailyPlayRepository.hasPlayedTodayUtc(),
                             onProfileClick = { currentScreen = Screen.User },
+                            onLeaderboardClick = { currentScreen = Screen.Leaderboard },
                             onPlayDaily = {
                                 gameViewModel.startDailyGame()
                                 currentScreen = Screen.Game
@@ -175,6 +181,17 @@ class MainActivity : ComponentActivity() {
                                     authViewModel.logout()
                                     currentScreen = Screen.Menu
                                 }
+                            )
+                        }
+
+                        Screen.Leaderboard -> {
+                            BackHandler { currentScreen = Screen.Menu }
+                            val leaderboardViewModel = viewModel<LeaderboardViewModel>()
+                            val leaderboardUiState by leaderboardViewModel.uiState.collectAsStateWithLifecycle()
+                            LeaderboardScreen(
+                                uiState = leaderboardUiState,
+                                onNavigateBack = { currentScreen = Screen.Menu },
+                                onRetry = { leaderboardViewModel.refresh() }
                             )
                         }
                     }

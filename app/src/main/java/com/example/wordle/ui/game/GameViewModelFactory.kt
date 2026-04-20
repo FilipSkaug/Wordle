@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.wordle.data.WordProvider
 import com.example.wordle.data.daily.DailyPlayRepository
 import com.example.wordle.data.stats.StatsRepository
+import com.example.wordle.data.stats.UserStatsRemoteSync
 
 class GameViewModelFactory(
     private val statsRepository: StatsRepository,
     private val wordProvider: WordProvider,
-    private val dailyPlayRepository: DailyPlayRepository
+    private val dailyPlayRepository: DailyPlayRepository,
+    private val userStatsRemoteSync: UserStatsRemoteSync
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
@@ -17,7 +19,8 @@ class GameViewModelFactory(
             return GameViewModel(
                 statsRepository = statsRepository,
                 wordProvider = wordProvider,
-                dailyPlayRepository = dailyPlayRepository
+                dailyPlayRepository = dailyPlayRepository,
+                userStatsRemoteSync = userStatsRemoteSync
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
