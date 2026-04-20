@@ -26,6 +26,7 @@ import com.example.wordle.ui.theme.WordleTheme
 @Composable
 fun MenuScreen(
     isAuthenticated: Boolean,
+    hasPlayedDaily: Boolean,
     onProfileClick: () -> Unit,
     onPlayDaily: () -> Unit,
     onPlayCustom: () -> Unit,
@@ -59,7 +60,7 @@ fun MenuScreen(
         Spacer(modifier = Modifier.height(64.dp))
 
         MenuButton(
-            text = "Daily Wordle",
+            text = if (hasPlayedDaily) "Play Random" else "Daily Wordle",
             icon = Icons.Default.PlayArrow,
             onClick = onPlayDaily,
             containerColor = MaterialTheme.colorScheme.primary,
@@ -187,6 +188,7 @@ fun MenuScreenPreview() {
     WordleTheme {
         MenuScreen(
             isAuthenticated = false,
+            hasPlayedDaily = false,
             onProfileClick = {},
             onPlayDaily = {},
             onPlayCustom = {},

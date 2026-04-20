@@ -148,6 +148,45 @@ class GameViewModel(
         }
     }
 
+    fun startDailyGame() {
+        onCloseStats()
+        if (dailyPlayRepository.hasPlayedTodayUtc()) {
+            val topBannerMessage =
+                "Daily word already played!\nSwitching to Random Mode."
+            startGame(
+                GameConfig(
+                    mode = GameMode.RANDOM,
+                    maxGuesses = DEFAULT_MAX_GUESSES
+                ),
+                topBannerMessage = topBannerMessage
+            )
+        } else {
+            startGame(
+                GameConfig(
+                    mode = GameMode.DAILY,
+                    maxGuesses = DEFAULT_MAX_GUESSES
+                )
+            )
+        }
+    }
+
+    fun startNewCustomGame(
+        maxGuesses: Int = DEFAULT_MAX_GUESSES,
+        targetWord: String? = null,
+        validateWords: Boolean = true,
+        hardMode: Boolean = false
+    ) {
+        startGame(
+            GameConfig(
+                mode = GameMode.CUSTOM,
+                maxGuesses = maxGuesses,
+                targetWord = targetWord,
+                validateWords = validateWords,
+                hardMode = hardMode
+            )
+        )
+    }
+
     fun onLeaveGameScreen() {
         // When returning later the same day, show the board instead of the result screen.
         if (_uiState.value.isResultScreenVisible) {
@@ -306,20 +345,25 @@ class GameViewModel(
 
                 if (isWin) {
                     val attempts = currentRowIndex + 1
-                    val updatedStats = updateStatsForGameEnd(
-                        current = statsRepository.load(),
-                        outcome = GameOutcome.WON,
-                        attempts = attempts
-                    )
-                    statsRepository.save(updatedStats)
-                    if (currentConfig.mode == GameMode.DAILY) {
+
+                    // Only update and save stats if playing the Daily mode
+                    val finalStats = if (currentConfig.mode == GameMode.DAILY) {
+                        val updatedStats = updateStatsForGameEnd(
+                            current = statsRepository.load(),
+                            outcome = GameOutcome.WON,
+                            attempts = attempts
+                        )
+                        statsRepository.save(updatedStats)
                         dailyPlayRepository.markPlayedTodayUtc()
+                        updatedStats // Use the new stats for the UI
+                    } else {
+                        statsRepository.load() // Use existing stats for the UI without saving
                     }
 
                     _uiState.value = currentState.copy(
                         rows = nextRows,
                         keyStates = nextKeyStates,
-                        stats = updatedStats,
+                        stats = finalStats, // Pass the appropriate stats object
                         gameOutcome = GameOutcome.WON,
                         revealedTargetWord = target,
                         isResultScreenVisible = true,
@@ -330,20 +374,24 @@ class GameViewModel(
                 }
 
                 if (isLastAttempt) {
-                    val updatedStats = updateStatsForGameEnd(
-                        current = statsRepository.load(),
-                        outcome = GameOutcome.LOST,
-                        attempts = null
-                    )
-                    statsRepository.save(updatedStats)
-                    if (currentConfig.mode == GameMode.DAILY) {
+                    // Only update and save stats if playing the Daily mode
+                    val finalStats = if (currentConfig.mode == GameMode.DAILY) {
+                        val updatedStats = updateStatsForGameEnd(
+                            current = statsRepository.load(),
+                            outcome = GameOutcome.LOST,
+                            attempts = null
+                        )
+                        statsRepository.save(updatedStats)
                         dailyPlayRepository.markPlayedTodayUtc()
+                        updatedStats
+                    } else {
+                        statsRepository.load()
                     }
 
                     _uiState.value = currentState.copy(
                         rows = nextRows,
                         keyStates = nextKeyStates,
-                        stats = updatedStats,
+                        stats = finalStats,
                         gameOutcome = GameOutcome.LOST,
                         revealedTargetWord = target,
                         isResultScreenVisible = true,
